@@ -1,0 +1,130 @@
+Index: app/src/main/java/com/example/weatherapp/components/SearchBar.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.weatherapp.components\r\n\r\nimport androidx.compose.foundation.layout.*\r\nimport androidx.compose.foundation.shape.RoundedCornerShape\r\nimport androidx.compose.foundation.text.KeyboardActions\r\nimport androidx.compose.foundation.text.KeyboardOptions\r\nimport androidx.compose.material.icons.Icons\r\nimport androidx.compose.material.icons.filled.MyLocation\r\nimport androidx.compose.material.icons.filled.Search\r\nimport androidx.compose.material3.*\r\nimport androidx.compose.runtime.*\r\nimport androidx.compose.ui.Alignment\r\nimport androidx.compose.ui.Modifier\r\nimport androidx.compose.ui.text.input.ImeAction\r\nimport androidx.compose.ui.unit.dp\r\n\r\n@OptIn(ExperimentalMaterial3Api::class)\r\n@Composable\r\nfun SearchBar(\r\n    searchQuery: String,\r\n    onSearchQueryChange: (String) -> Unit,\r\n    onSearch: () -> Unit,\r\n    onLocationClick: () -> Unit = {},\r\n    isCelsius: Boolean = false,\r\n    onToggleUnit: () -> Unit = {},\r\n    modifier: Modifier = Modifier\r\n) {\r\n    Column(modifier = modifier.fillMaxWidth()) {\r\n        Card(\r\n            modifier = Modifier\r\n                .fillMaxWidth()\r\n                .padding(16.dp)\r\n                .padding(top = 8.dp),\r\n            shape = RoundedCornerShape(20.dp),\r\n            colors = CardDefaults.cardColors(\r\n                containerColor = MaterialTheme.colorScheme.surfaceVariant\r\n            ),\r\n            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)\r\n        ) {\r\n            Row(\r\n                modifier = Modifier\r\n                    .fillMaxWidth()\r\n                    .padding(16.dp),\r\n                horizontalArrangement = Arrangement.SpaceBetween,\r\n                verticalAlignment = Alignment.CenterVertically\r\n            ) {\r\n                Text(\r\n                    text = \"Weather App\",\r\n                    style = MaterialTheme.typography.titleLarge,\r\n                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,\r\n                    color = MaterialTheme.colorScheme.primary\r\n                )\r\n                \r\n                Card(\r\n                    shape = RoundedCornerShape(20.dp),\r\n                    colors = CardDefaults.cardColors(\r\n                        containerColor = MaterialTheme.colorScheme.surface\r\n                    )\r\n                ) {\r\n                    Row(\r\n                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),\r\n                        horizontalArrangement = Arrangement.spacedBy(4.dp),\r\n                        verticalAlignment = Alignment.CenterVertically\r\n                    ) {\r\n                        Text(\r\n                            text = \"°F\",\r\n                            style = MaterialTheme.typography.bodyMedium,\r\n                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,\r\n                            color = if (!isCelsius) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant\r\n                        )\r\n                        Switch(\r\n                            checked = isCelsius,\r\n                            onCheckedChange = { onToggleUnit() }\r\n                        )\r\n                        Text(\r\n                            text = \"°C\",\r\n                            style = MaterialTheme.typography.bodyMedium,\r\n                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,\r\n                            color = if (isCelsius) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant\r\n                        )\r\n                    }\r\n                }\r\n            }\r\n        }\r\n        \r\n        Row(\r\n            modifier = Modifier\r\n                .fillMaxWidth()\r\n                .padding(horizontal = 16.dp, vertical = 8.dp),\r\n            horizontalArrangement = Arrangement.spacedBy(12.dp),\r\n            verticalAlignment = Alignment.CenterVertically\r\n        ) {\r\n            OutlinedTextField(\r\n                value = searchQuery,\r\n                onValueChange = onSearchQueryChange,\r\n                modifier = Modifier.weight(1f),\r\n                placeholder = { Text(\"Search for a city...\") },\r\n                leadingIcon = {\r\n                    Icon(\r\n                        imageVector = Icons.Default.Search,\r\n                        contentDescription = \"Search\"\r\n                    )\r\n                },\r\n                singleLine = true,\r\n                shape = RoundedCornerShape(28.dp),\r\n                colors = OutlinedTextFieldDefaults.colors(\r\n                    focusedBorderColor = MaterialTheme.colorScheme.primary,\r\n                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,\r\n                    focusedContainerColor = MaterialTheme.colorScheme.surface,\r\n                    unfocusedContainerColor = MaterialTheme.colorScheme.surface\r\n                ),\r\n                keyboardOptions = KeyboardOptions(\r\n                    imeAction = ImeAction.Search\r\n                ),\r\n                keyboardActions = KeyboardActions(\r\n                    onSearch = { onSearch() }\r\n                )\r\n            )\r\n            \r\n            // Location button\r\n            FilledIconButton(\r\n                onClick = onLocationClick,\r\n                modifier = Modifier.size(56.dp),\r\n                colors = IconButtonDefaults.filledIconButtonColors(\r\n                    containerColor = MaterialTheme.colorScheme.primaryContainer\r\n                )\r\n            ) {\r\n                Icon(\r\n                    imageVector = Icons.Default.MyLocation,\r\n                    contentDescription = \"Current Location\",\r\n                    tint = MaterialTheme.colorScheme.onPrimaryContainer\r\n                )\r\n            }\r\n        }\r\n    }\r\n}\r\n
+===================================================================
+diff --git a/app/src/main/java/com/example/weatherapp/components/SearchBar.kt b/app/src/main/java/com/example/weatherapp/components/SearchBar.kt
+--- a/app/src/main/java/com/example/weatherapp/components/SearchBar.kt	(revision f4e3177d5b2d8b8ece3a38bc127c80f3dc85b645)
++++ b/app/src/main/java/com/example/weatherapp/components/SearchBar.kt	(date 1765268063366)
+@@ -5,6 +5,7 @@
+ import androidx.compose.foundation.text.KeyboardActions
+ import androidx.compose.foundation.text.KeyboardOptions
+ import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.filled.Map
+ import androidx.compose.material.icons.filled.MyLocation
+ import androidx.compose.material.icons.filled.Search
+ import androidx.compose.material3.*
+@@ -23,6 +24,7 @@
+     onLocationClick: () -> Unit = {},
+     isCelsius: Boolean = false,
+     onToggleUnit: () -> Unit = {},
++    onMapClick: () -> Unit = {},
+     modifier: Modifier = Modifier
+ ) {
+     Column(modifier = modifier.fillMaxWidth()) {
+@@ -131,6 +133,21 @@
+                     tint = MaterialTheme.colorScheme.onPrimaryContainer
+                 )
+             }
++            
++            // Map button
++            FilledIconButton(
++                onClick = onMapClick,
++                modifier = Modifier.size(56.dp),
++                colors = IconButtonDefaults.filledIconButtonColors(
++                    containerColor = MaterialTheme.colorScheme.tertiaryContainer
++                )
++            ) {
++                Icon(
++                    imageVector = Icons.Default.Map,
++                    contentDescription = "Select on Map",
++                    tint = MaterialTheme.colorScheme.onTertiaryContainer
++                )
++            }
+         }
+     }
+ }
+Index: app/src/main/java/com/example/weatherapp/screens/WeatherScreen.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.weatherapp.screens\r\n\r\nimport androidx.compose.foundation.layout.*\r\nimport androidx.compose.foundation.rememberScrollState\r\nimport androidx.compose.foundation.verticalScroll\r\nimport androidx.compose.material3.*\r\nimport androidx.compose.runtime.*\r\nimport androidx.compose.ui.Alignment\r\nimport androidx.compose.ui.Modifier\r\nimport androidx.compose.ui.unit.dp\r\nimport androidx.lifecycle.viewmodel.compose.viewModel\r\nimport com.example.weatherapp.components.*\r\nimport com.example.weatherapp.models.*\r\nimport com.example.weatherapp.viewmodel.WeatherViewModel\r\n\r\n@Composable\r\nfun WeatherScreen(\r\n    modifier: Modifier = Modifier,\r\n    viewModel: WeatherViewModel = viewModel()\r\n) {\r\n    var searchQuery by remember { mutableStateOf(\"\") }\r\n    val uiState by viewModel.uiState.collectAsState()\r\n    \r\n    val weatherData = uiState.weatherData ?: WeatherData(\r\n            location = \"Loading...\",\r\n            currentTemp = 72,\r\n            condition = \"Partly Cloudy\",\r\n            highTemp = 75,\r\n            lowTemp = 65,\r\n            feelsLike = 70,\r\n            humidity = 65,\r\n            windSpeed = 12,\r\n            airQuality = AirQuality(\r\n                aqi = 42,\r\n                quality = \"Good\",\r\n                pm25 = 12.5,\r\n                pm10 = 18.3\r\n            ),\r\n            uvIndex = UVIndex(\r\n                index = 6,\r\n                level = \"Moderate\",\r\n                peakTime = \"12:00 PM\"\r\n            ),\r\n            sunriseSunset = SunriseSunset(\r\n                sunrise = \"6:45 AM\",\r\n                sunset = \"7:30 PM\",\r\n                dayLength = \"12h 45m\"\r\n            ),\r\n            hourlyForecast = listOf(\r\n                HourlyForecast(\"Now\", 72, \"Cloudy\", \"☁\uFE0F\"),\r\n                HourlyForecast(\"1 PM\", 73, \"Sunny\", \"☀\uFE0F\"),\r\n                HourlyForecast(\"2 PM\", 74, \"Sunny\", \"☀\uFE0F\"),\r\n                HourlyForecast(\"3 PM\", 75, \"Clear\", \"\uD83C\uDF24\uFE0F\"),\r\n                HourlyForecast(\"4 PM\", 74, \"Clear\", \"\uD83C\uDF24\uFE0F\"),\r\n                HourlyForecast(\"5 PM\", 72, \"Cloudy\", \"☁\uFE0F\"),\r\n                HourlyForecast(\"6 PM\", 70, \"Cloudy\", \"☁\uFE0F\"),\r\n                HourlyForecast(\"7 PM\", 68, \"Clear\", \"\uD83C\uDF19\")\r\n            ),\r\n            fiveDayForecast = listOf(\r\n                DailyForecast(\"Monday\", \"Dec 9\", 75, 65, \"Partly Cloudy\", \"⛅\", 10),\r\n                DailyForecast(\"Tuesday\", \"Dec 10\", 77, 66, \"Sunny\", \"☀\uFE0F\", 0),\r\n                DailyForecast(\"Wednesday\", \"Dec 11\", 73, 64, \"Cloudy\", \"☁\uFE0F\", 30),\r\n                DailyForecast(\"Thursday\", \"Dec 12\", 70, 62, \"Rainy\", \"\uD83C\uDF27\uFE0F\", 80),\r\n                DailyForecast(\"Friday\", \"Dec 13\", 72, 63, \"Clear\", \"\uD83C\uDF24\uFE0F\", 5)\r\n            )\r\n        )\r\n    \r\n    Box(modifier = modifier.fillMaxSize()) {\r\n        Column(\r\n            modifier = Modifier\r\n                .fillMaxSize()\r\n                .verticalScroll(rememberScrollState())\r\n        ) {\r\n            // Search Bar\r\n            SearchBar(\r\n                searchQuery = searchQuery,\r\n                onSearchQueryChange = { searchQuery = it },\r\n                onSearch = { \r\n                    if (searchQuery.isNotBlank()) {\r\n                        viewModel.searchWeatherByCity(searchQuery)\r\n                    }\r\n                },\r\n                onLocationClick = { \r\n                    // For now, search Phnom Penh as default location\r\n                    viewModel.searchWeatherByCity(\"Phnom Penh\")\r\n                },\r\n                isCelsius = uiState.isCelsius,\r\n                onToggleUnit = { viewModel.toggleTemperatureUnit() }\r\n            )\r\n            \r\n            // Loading indicator\r\n            if (uiState.isLoading) {\r\n                Box(\r\n                    modifier = Modifier\r\n                        .fillMaxWidth()\r\n                        .padding(32.dp),\r\n                    contentAlignment = Alignment.Center\r\n                ) {\r\n                    CircularProgressIndicator()\r\n                }\r\n            }\r\n            \r\n            // Error message\r\n            uiState.error?.let { error ->\r\n                Card(\r\n                    modifier = Modifier\r\n                        .fillMaxWidth()\r\n                        .padding(16.dp),\r\n                    colors = CardDefaults.cardColors(\r\n                        containerColor = MaterialTheme.colorScheme.errorContainer\r\n                    )\r\n                ) {\r\n                    Text(\r\n                        text = error,\r\n                        modifier = Modifier.padding(16.dp),\r\n                        color = MaterialTheme.colorScheme.onErrorContainer\r\n                    )\r\n                }\r\n            }\r\n            \r\n            // Current Weather\r\n            if (!uiState.isLoading) {\r\n                CurrentWeatherCard(weatherData = weatherData)\r\n        \r\n        // Hourly Forecast\r\n        HourlyForecastSection(hourlyForecasts = weatherData.hourlyForecast)\r\n        \r\n        // 5-Day Forecast\r\n        FiveDayForecastSection(dailyForecasts = weatherData.fiveDayForecast)\r\n        \r\n        // Air Quality\r\n        AirQualityCard(airQuality = weatherData.airQuality)\r\n        \r\n        // UV Index\r\n        UVIndexCard(uvIndex = weatherData.uvIndex)\r\n        \r\n        // Sunrise & Sunset\r\n        SunriseSunsetCard(sunriseSunset = weatherData.sunriseSunset)\r\n        \r\n                // Weather Map\r\n                WeatherMapCard()\r\n                \r\n                // Bottom spacing\r\n                Spacer(modifier = Modifier.height(16.dp))\r\n            }\r\n        }\r\n    }\r\n}\r\n
+===================================================================
+diff --git a/app/src/main/java/com/example/weatherapp/screens/WeatherScreen.kt b/app/src/main/java/com/example/weatherapp/screens/WeatherScreen.kt
+--- a/app/src/main/java/com/example/weatherapp/screens/WeatherScreen.kt	(revision f4e3177d5b2d8b8ece3a38bc127c80f3dc85b645)
++++ b/app/src/main/java/com/example/weatherapp/screens/WeatherScreen.kt	(date 1765268042459)
+@@ -3,6 +3,8 @@
+ import androidx.compose.foundation.layout.*
+ import androidx.compose.foundation.rememberScrollState
+ import androidx.compose.foundation.verticalScroll
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.filled.Map
+ import androidx.compose.material3.*
+ import androidx.compose.runtime.*
+ import androidx.compose.ui.Alignment
+@@ -19,8 +21,20 @@
+     viewModel: WeatherViewModel = viewModel()
+ ) {
+     var searchQuery by remember { mutableStateOf("") }
++    var showMap by remember { mutableStateOf(false) }
+     val uiState by viewModel.uiState.collectAsState()
+     
++    if (showMap) {
++        MapScreen(
++            onLocationSelected = { lat, lon, name ->
++                viewModel.searchWeatherByCoords(lat, lon)
++                showMap = false
++            },
++            onClose = { showMap = false }
++        )
++        return
++    }
++    
+     val weatherData = uiState.weatherData ?: WeatherData(
+             location = "Loading...",
+             currentTemp = 72,
+@@ -85,7 +99,8 @@
+                     viewModel.searchWeatherByCity("Phnom Penh")
+                 },
+                 isCelsius = uiState.isCelsius,
+-                onToggleUnit = { viewModel.toggleTemperatureUnit() }
++                onToggleUnit = { viewModel.toggleTemperatureUnit() },
++                onMapClick = { showMap = true }
+             )
+             
+             // Loading indicator
+Index: app/src/main/java/com/example/weatherapp/viewmodel/WeatherViewModel.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.weatherapp.viewmodel\r\n\r\nimport androidx.lifecycle.ViewModel\r\nimport androidx.lifecycle.viewModelScope\r\nimport com.example.weatherapp.models.*\r\nimport com.example.weatherapp.models.api.WeatherResponse\r\nimport com.example.weatherapp.repository.WeatherRepository\r\nimport kotlinx.coroutines.flow.MutableStateFlow\r\nimport kotlinx.coroutines.flow.StateFlow\r\nimport kotlinx.coroutines.launch\r\nimport java.text.SimpleDateFormat\r\nimport java.util.*\r\n\r\ndata class WeatherUiState(\r\n    val weatherData: WeatherData? = null,\r\n    val isLoading: Boolean = false,\r\n    val error: String? = null,\r\n    val isCelsius: Boolean = false\r\n)\r\n\r\nclass WeatherViewModel : ViewModel() {\r\n    private val repository = WeatherRepository()\r\n    \r\n    private val _uiState = MutableStateFlow(WeatherUiState())\r\n    val uiState: StateFlow<WeatherUiState> = _uiState\r\n    \r\n    private var lastCity: String = \"Phnom Penh\"\r\n    \r\n    init {\r\n        searchWeatherByCity(lastCity)\r\n    }\r\n    \r\n    fun toggleTemperatureUnit() {\r\n        val currentState = _uiState.value\r\n        _uiState.value = currentState.copy(isCelsius = !currentState.isCelsius)\r\n        // Refresh with new unit\r\n        searchWeatherByCity(lastCity)\r\n    }\r\n    \r\n    fun searchWeatherByCity(city: String) {\r\n        lastCity = city\r\n        viewModelScope.launch {\r\n            _uiState.value = _uiState.value.copy(isLoading = true, error = null)\r\n            \r\n            val units = if (_uiState.value.isCelsius) \"metric\" else \"imperial\"\r\n            val result = repository.getWeatherByCity(city, units)\r\n            \r\n            result.onSuccess { response ->\r\n                _uiState.value = _uiState.value.copy(\r\n                    weatherData = convertToWeatherData(response),\r\n                    isLoading = false\r\n                )\r\n            }.onFailure { exception ->\r\n                _uiState.value = _uiState.value.copy(\r\n                    isLoading = false,\r\n                    error = exception.message ?: \"Failed to fetch weather\"\r\n                )\r\n            }\r\n        }\r\n    }\r\n    \r\n    private fun convertToWeatherData(response: WeatherResponse): WeatherData {\r\n        val condition = response.weather.firstOrNull()?.main ?: \"Clear\"\r\n        val description = response.weather.firstOrNull()?.description ?: \"\"\r\n        \r\n        return WeatherData(\r\n            location = \"${response.name}, ${response.sys.country}\",\r\n            currentTemp = response.main.temp.toInt(),\r\n            condition = description.replaceFirstChar { it.uppercase() },\r\n            highTemp = response.main.temp_max.toInt(),\r\n            lowTemp = response.main.temp_min.toInt(),\r\n            feelsLike = response.main.feels_like.toInt(),\r\n            humidity = response.main.humidity,\r\n            windSpeed = response.wind.speed.toInt(),\r\n            airQuality = AirQuality(\r\n                aqi = 42,\r\n                quality = \"Good\",\r\n                pm25 = 12.5,\r\n                pm10 = 18.3\r\n            ),\r\n            uvIndex = UVIndex(\r\n                index = 6,\r\n                level = \"Moderate\",\r\n                peakTime = \"12:00 PM\"\r\n            ),\r\n            sunriseSunset = SunriseSunset(\r\n                sunrise = formatTime(response.sys.sunrise),\r\n                sunset = formatTime(response.sys.sunset),\r\n                dayLength = calculateDayLength(response.sys.sunrise, response.sys.sunset)\r\n            ),\r\n            hourlyForecast = generateHourlyForecast(response.main.temp.toInt()),\r\n            fiveDayForecast = generateFiveDayForecast(response.main.temp.toInt())\r\n        )\r\n    }\r\n    \r\n    private fun formatTime(timestamp: Long): String {\r\n        val sdf = SimpleDateFormat(\"h:mm a\", Locale.getDefault())\r\n        return sdf.format(Date(timestamp * 1000))\r\n    }\r\n    \r\n    private fun calculateDayLength(sunrise: Long, sunset: Long): String {\r\n        val diff = sunset - sunrise\r\n        val hours = diff / 3600\r\n        val minutes = (diff % 3600) / 60\r\n        return \"${hours}h ${minutes}m\"\r\n    }\r\n    \r\n    private fun generateHourlyForecast(baseTemp: Int): List<HourlyForecast> {\r\n        val hours = listOf(\"Now\", \"1 PM\", \"2 PM\", \"3 PM\", \"4 PM\", \"5 PM\", \"6 PM\", \"7 PM\")\r\n        return hours.mapIndexed { index, hour ->\r\n            HourlyForecast(\r\n                hour,\r\n                baseTemp + (index - 1),\r\n                if (index < 4) \"Sunny\" else \"Clear\",\r\n                if (index < 4) \"☀\uFE0F\" else \"\uD83C\uDF19\"\r\n            )\r\n        }\r\n    }\r\n    \r\n    private fun generateFiveDayForecast(baseTemp: Int): List<DailyForecast> {\r\n        val days = listOf(\"Monday\", \"Tuesday\", \"Wednesday\", \"Thursday\", \"Friday\")\r\n        val dates = listOf(\"Dec 9\", \"Dec 10\", \"Dec 11\", \"Dec 12\", \"Dec 13\")\r\n        val conditions = listOf(\"Partly Cloudy\", \"Sunny\", \"Cloudy\", \"Rainy\", \"Clear\")\r\n        val icons = listOf(\"⛅\", \"☀\uFE0F\", \"☁\uFE0F\", \"\uD83C\uDF27\uFE0F\", \"\uD83C\uDF24\uFE0F\")\r\n        val rainChances = listOf(10, 0, 30, 80, 5)\r\n        \r\n        return days.indices.map { i ->\r\n            DailyForecast(\r\n                days[i],\r\n                dates[i],\r\n                baseTemp + (2 - i),\r\n                baseTemp - (5 + i),\r\n                conditions[i],\r\n                icons[i],\r\n                rainChances[i]\r\n            )\r\n        }\r\n    }\r\n}\r\n
+===================================================================
+diff --git a/app/src/main/java/com/example/weatherapp/viewmodel/WeatherViewModel.kt b/app/src/main/java/com/example/weatherapp/viewmodel/WeatherViewModel.kt
+--- a/app/src/main/java/com/example/weatherapp/viewmodel/WeatherViewModel.kt	(revision f4e3177d5b2d8b8ece3a38bc127c80f3dc85b645)
++++ b/app/src/main/java/com/example/weatherapp/viewmodel/WeatherViewModel.kt	(date 1765268023381)
+@@ -59,6 +59,27 @@
+         }
+     }
+     
++    fun searchWeatherByCoords(lat: Double, lon: Double) {
++        viewModelScope.launch {
++            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
++            
++            val units = if (_uiState.value.isCelsius) "metric" else "imperial"
++            val result = repository.getWeatherByCoords(lat, lon, units)
++            
++            result.onSuccess { response ->
++                _uiState.value = _uiState.value.copy(
++                    weatherData = convertToWeatherData(response),
++                    isLoading = false
++                )
++            }.onFailure { exception ->
++                _uiState.value = _uiState.value.copy(
++                    isLoading = false,
++                    error = exception.message ?: "Failed to fetch weather"
++                )
++            }
++        }
++    }
++    
+     private fun convertToWeatherData(response: WeatherResponse): WeatherData {
+         val condition = response.weather.firstOrNull()?.main ?: "Clear"
+         val description = response.weather.firstOrNull()?.description ?: ""
