@@ -3,22 +3,26 @@ package com.example.weatherapp.screens
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.weatherapp.components.*
 import com.example.weatherapp.models.*
+import com.example.weatherapp.viewmodel.WeatherViewModel
 
 @Composable
 fun WeatherScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: WeatherViewModel = viewModel()
 ) {
     var searchQuery by remember { mutableStateOf("") }
+    val uiState by viewModel.uiState.collectAsState()
     
-    // Sample data - this will be replaced with real API data later
-    val weatherData = remember {
-        WeatherData(
-            location = "San Francisco, CA",
+    val weatherData = uiState.weatherData ?: WeatherData(
+            location = "Loading...",
             currentTemp = 72,
             condition = "Partly Cloudy",
             highTemp = 75,
@@ -60,22 +64,63 @@ fun WeatherScreen(
                 DailyForecast("Friday", "Dec 13", 72, 63, "Clear", "🌤️", 5)
             )
         )
-    }
     
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-    ) {
-        // Search Bar
-        SearchBar(
-            searchQuery = searchQuery,
-            onSearchQueryChange = { searchQuery = it },
-            onSearch = { /* Handle search */ }
-        )
-        
-        // Current Weather
-        CurrentWeatherCard(weatherData = weatherData)
+    Box(modifier = modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Search Bar
+            SearchBar(
+                searchQuery = searchQuery,
+                onSearchQueryChange = { searchQuery = it },
+                onSearch = { 
+                    if (searchQuery.isNotBlank()) {
+                        viewModel.searchWeatherByCity(searchQuery)
+                    }
+                },
+                onLocationClick = { 
+                    // For now, search Phnom Penh as default location
+                    viewModel.searchWeatherByCity("Phnom Penh")
+                },
+                isCelsius = uiState.isCelsius,
+                onToggleUnit = { viewModel.toggleTemperatureUnit() }
+            )
+            
+            // Loading indicator
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+            
+            // Error message
+            uiState.error?.let { error ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Text(
+                        text = error,
+                        modifier = Modifier.padding(16.dp),
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+            
+            // Current Weather
+            if (!uiState.isLoading) {
+                CurrentWeatherCard(weatherData = weatherData)
         
         // Hourly Forecast
         HourlyForecastSection(hourlyForecasts = weatherData.hourlyForecast)
@@ -92,10 +137,12 @@ fun WeatherScreen(
         // Sunrise & Sunset
         SunriseSunsetCard(sunriseSunset = weatherData.sunriseSunset)
         
-        // Weather Map
-        WeatherMapCard()
-        
-        // Bottom spacing
-        Spacer(modifier = Modifier.height(16.dp))
+                // Weather Map
+                WeatherMapCard()
+                
+                // Bottom spacing
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
     }
 }
