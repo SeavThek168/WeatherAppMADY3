@@ -1,10 +1,15 @@
 package com.example.weatherapp.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.weatherapp.location.LocationManager
 import com.example.weatherapp.models.*
 import com.example.weatherapp.models.api.WeatherResponse
 import com.example.weatherapp.repository.WeatherRepository
+import com.example.weatherapp.util.toWeatherError
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -15,29 +20,98 @@ data class WeatherUiState(
     val weatherData: WeatherData? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
-    val isCelsius: Boolean = false
+    val isCelsius: Boolean = false,
+    val currentLat: Double? = null,
+    val currentLon: Double? = null,
+    val isFromCache: Boolean = false,
+    val lastUpdated: Long? = null,
+    val isRefreshing: Boolean = false
 )
 
-class WeatherViewModel : ViewModel() {
-    private val repository = WeatherRepository()
+class WeatherViewModel(application: Application) : AndroidViewModel(application) {
+    // Repository with context for caching
+    private val repository = WeatherRepository(application.applicationContext)
+    
+    // Location manager for device location
+    private val locationManager = LocationManager(application.applicationContext)
     
     private val _uiState = MutableStateFlow(WeatherUiState())
     val uiState: StateFlow<WeatherUiState> = _uiState
     
     private var lastCity: String = "Phnom Penh"
+    private var searchJob: Job? = null
+    
+    // Debounce delay for search
+    private val searchDebounceMs = 500L
     
     init {
+        // Try to get device location first, fallback to default city
+        viewModelScope.launch {
+            tryGetDeviceLocation()
+        }
+    }
+    
+    /**
+     * Try to get weather for device location
+     */
+    private suspend fun tryGetDeviceLocation() {
+        if (locationManager.hasLocationPermission()) {
+            try {
+                val location = locationManager.getLastKnownLocation()
+                    ?: locationManager.getCurrentLocation()
+                
+                if (location != null) {
+                    searchWeatherByCoords(location.latitude, location.longitude)
+                    return
+                }
+            } catch (e: Exception) {
+                // Fall through to default city
+            }
+        }
+        // Fallback to default city
         searchWeatherByCity(lastCity)
+    }
+    
+    /**
+     * Refresh weather using device location
+     */
+    fun refreshWithDeviceLocation() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            tryGetDeviceLocation()
+        }
     }
     
     fun toggleTemperatureUnit() {
         val currentState = _uiState.value
         _uiState.value = currentState.copy(isCelsius = !currentState.isCelsius)
         // Refresh with new unit
-        searchWeatherByCity(lastCity)
+        if (currentState.currentLat != null && currentState.currentLon != null) {
+            searchWeatherByCoords(currentState.currentLat, currentState.currentLon)
+        } else {
+            searchWeatherByCity(lastCity)
+        }
+    }
+    
+    /**
+     * Search with debouncing to prevent rapid API calls
+     */
+    fun searchWeatherByCityDebounced(city: String) {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            delay(searchDebounceMs)
+            searchWeatherByCity(city)
+        }
     }
     
     fun searchWeatherByCity(city: String) {
+        if (city.isBlank()) {
+            _uiState.value = _uiState.value.copy(
+                error = "Please enter a city name"
+            )
+            return
+        }
+        
         lastCity = city
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
@@ -48,16 +122,88 @@ class WeatherViewModel : ViewModel() {
             result.onSuccess { response ->
                 _uiState.value = _uiState.value.copy(
                     weatherData = convertToWeatherData(response),
-                    isLoading = false
+                    isLoading = false,
+                    currentLat = response.coord.lat,
+                    currentLon = response.coord.lon,
+                    lastUpdated = System.currentTimeMillis(),
+                    error = null
                 )
             }.onFailure { exception ->
+                val errorMessage = exception.toWeatherError().message
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = exception.message ?: "Failed to fetch weather"
+                    error = errorMessage
                 )
             }
         }
     }
+    
+    fun searchWeatherByCoords(lat: Double, lon: Double) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            
+            val units = if (_uiState.value.isCelsius) "metric" else "imperial"
+            val result = repository.getWeatherByCoords(lat, lon, units)
+            
+            result.onSuccess { response ->
+                _uiState.value = _uiState.value.copy(
+                    weatherData = convertToWeatherData(response),
+                    isLoading = false,
+                    currentLat = lat,
+                    currentLon = lon,
+                    lastUpdated = System.currentTimeMillis(),
+                    error = null
+                )
+            }.onFailure { exception ->
+                val errorMessage = exception.toWeatherError().message
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = errorMessage
+                )
+            }
+        }
+    }
+    
+    /**
+     * Force refresh - bypass cache
+     */
+    fun forceRefresh() {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isRefreshing = true, error = null)
+            
+            val units = if (_uiState.value.isCelsius) "metric" else "imperial"
+            val result = repository.forceRefresh(lastCity, units)
+            
+            result.onSuccess { response ->
+                _uiState.value = _uiState.value.copy(
+                    weatherData = convertToWeatherData(response),
+                    isRefreshing = false,
+                    currentLat = response.coord.lat,
+                    currentLon = response.coord.lon,
+                    lastUpdated = System.currentTimeMillis(),
+                    isFromCache = false,
+                    error = null
+                )
+            }.onFailure { exception ->
+                _uiState.value = _uiState.value.copy(
+                    isRefreshing = false,
+                    error = exception.toWeatherError().message
+                )
+            }
+        }
+    }
+    
+    /**
+     * Clear error state
+     */
+    fun clearError() {
+        _uiState.value = _uiState.value.copy(error = null)
+    }
+    
+    /**
+     * Check if location permission is available
+     */
+    fun hasLocationPermission(): Boolean = locationManager.hasLocationPermission()
     
     private fun convertToWeatherData(response: WeatherResponse): WeatherData {
         val condition = response.weather.firstOrNull()?.main ?: "Clear"

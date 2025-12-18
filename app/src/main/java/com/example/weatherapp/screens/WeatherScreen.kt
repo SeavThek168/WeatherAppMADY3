@@ -1,25 +1,51 @@
 package com.example.weatherapp.screens
 
+import android.Manifest
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.weatherapp.components.*
 import com.example.weatherapp.models.*
 import com.example.weatherapp.viewmodel.WeatherViewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.android.gms.maps.model.LatLng
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun WeatherScreen(
+    onNavigateToProfile: () -> Unit = {},
+    onNavigateToMap: () -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: WeatherViewModel = viewModel()
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val uiState by viewModel.uiState.collectAsState()
+    
+    // Location permissions state
+    val locationPermissionsState = rememberMultiplePermissionsState(
+        listOf(
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        )
+    )
+    
+    // Request location when permissions are granted
+    LaunchedEffect(locationPermissionsState.allPermissionsGranted) {
+        if (locationPermissionsState.allPermissionsGranted) {
+            viewModel.refreshWithDeviceLocation()
+        }
+    }
     
     val weatherData = uiState.weatherData ?: WeatherData(
             location = "Loading...",
@@ -71,6 +97,9 @@ fun WeatherScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
+            // Refresh indicator
+            RefreshIndicator(isRefreshing = uiState.isRefreshing)
+            
             // Search Bar
             SearchBar(
                 searchQuery = searchQuery,
@@ -81,41 +110,41 @@ fun WeatherScreen(
                     }
                 },
                 onLocationClick = { 
-                    // For now, search Phnom Penh as default location
-                    viewModel.searchWeatherByCity("Phnom Penh")
+                    // Request location permission if not granted
+                    if (locationPermissionsState.allPermissionsGranted) {
+                        viewModel.refreshWithDeviceLocation()
+                    } else {
+                        locationPermissionsState.launchMultiplePermissionRequest()
+                    }
                 },
                 isCelsius = uiState.isCelsius,
                 onToggleUnit = { viewModel.toggleTemperatureUnit() }
             )
             
-            // Loading indicator
-            if (uiState.isLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
+            // Location permission request card (show if not granted)
+            if (!locationPermissionsState.allPermissionsGranted && uiState.weatherData == null) {
+                LocationPermissionCard(
+                    permissionsState = locationPermissionsState,
+                    onRequestPermission = {
+                        locationPermissionsState.launchMultiplePermissionRequest()
+                    }
+                )
             }
             
-            // Error message
+            // Loading indicator
+            LoadingOverlay(isLoading = uiState.isLoading)
+            
+            // Error message with retry
             uiState.error?.let { error ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    )
-                ) {
-                    Text(
-                        text = error,
-                        modifier = Modifier.padding(16.dp),
-                        color = MaterialTheme.colorScheme.onErrorContainer
-                    )
-                }
+                ErrorCard(
+                    message = error,
+                    onRetry = { 
+                        viewModel.forceRefresh()
+                    },
+                    onDismiss = {
+                        viewModel.clearError()
+                    }
+                )
             }
             
             // Current Weather
@@ -138,11 +167,35 @@ fun WeatherScreen(
         SunriseSunsetCard(sunriseSunset = weatherData.sunriseSunset)
         
                 // Weather Map
-                WeatherMapCard()
+                WeatherMapCard(
+                    currentLocation = LatLng(
+                        uiState.currentLat ?: 11.5564,
+                        uiState.currentLon ?: 104.9282
+                    ),
+                    onExpandMap = onNavigateToMap,
+                    onLocationClick = { latLng ->
+                        viewModel.searchWeatherByCoords(latLng.latitude, latLng.longitude)
+                    }
+                )
                 
                 // Bottom spacing
                 Spacer(modifier = Modifier.height(16.dp))
             }
+        }
+        
+        // Profile button in top-right corner
+        IconButton(
+            onClick = onNavigateToProfile,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.AccountCircle,
+                contentDescription = "Profile",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(32.dp)
+            )
         }
     }
 }

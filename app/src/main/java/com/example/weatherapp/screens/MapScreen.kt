@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,15 +15,26 @@ import androidx.compose.ui.unit.dp
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.weatherapp.viewmodel.WeatherViewModel
 
 @Composable
 fun MapScreen(
     onLocationSelected: (Double, Double, String) -> Unit,
     onClose: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    weatherViewModel: WeatherViewModel = viewModel()
 ) {
     var selectedLocation by remember { mutableStateOf<LatLng?>(null) }
-    val defaultLocation = LatLng(11.5564, 104.9282) // Phnom Penh
+    var mapType by remember { mutableStateOf(MapType.NORMAL) }
+    val uiState by weatherViewModel.uiState.collectAsState()
+    
+    // Use current location from ViewModel if available
+    val defaultLocation = LatLng(
+        uiState.currentLat ?: 11.5564,
+        uiState.currentLon ?: 104.9282
+    )
+    
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(defaultLocation, 10f)
     }
@@ -32,7 +45,7 @@ fun MapScreen(
             cameraPositionState = cameraPositionState,
             properties = MapProperties(
                 isMyLocationEnabled = false,
-                mapType = MapType.NORMAL
+                mapType = mapType
             ),
             uiSettings = MapUiSettings(
                 zoomControlsEnabled = true,
@@ -43,6 +56,14 @@ fun MapScreen(
                 selectedLocation = latLng
             }
         ) {
+            // Current weather location marker
+            Marker(
+                state = MarkerState(position = defaultLocation),
+                title = "Current Weather Location",
+                snippet = uiState.weatherData?.location ?: "Weather location"
+            )
+            
+            // Selected location marker
             selectedLocation?.let { location ->
                 Marker(
                     state = MarkerState(position = location),
@@ -52,7 +73,7 @@ fun MapScreen(
             }
         }
         
-        // Top bar with close button
+        // Top bar with close button and map type selector
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -76,11 +97,27 @@ fun MapScreen(
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
-                IconButton(onClick = onClose) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close"
-                    )
+                Row {
+                    // Map type toggle
+                    IconButton(onClick = {
+                        mapType = when (mapType) {
+                            MapType.NORMAL -> MapType.SATELLITE
+                            MapType.SATELLITE -> MapType.TERRAIN
+                            MapType.TERRAIN -> MapType.HYBRID
+                            else -> MapType.NORMAL
+                        }
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Layers,
+                            contentDescription = "Change Map Type"
+                        )
+                    }
+                    IconButton(onClick = onClose) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close"
+                        )
+                    }
                 }
             }
         }
@@ -116,6 +153,11 @@ fun MapScreen(
                     )
                     Button(
                         onClick = {
+                            // Fetch weather for selected location
+                            weatherViewModel.searchWeatherByCoords(
+                                location.latitude,
+                                location.longitude
+                            )
                             onLocationSelected(
                                 location.latitude,
                                 location.longitude,
