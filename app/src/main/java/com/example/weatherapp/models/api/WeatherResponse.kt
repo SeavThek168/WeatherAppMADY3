@@ -8,7 +8,8 @@ data class WeatherResponse(
     val clouds: Clouds,
     val sys: Sys,
     val name: String,
-    val dt: Long
+    val dt: Long,
+    val visibility: Int? = 10000
 )
 
 data class Coord(

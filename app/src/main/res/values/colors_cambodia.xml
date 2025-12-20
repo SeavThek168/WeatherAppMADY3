@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 🇰🇭 Cambodia Weather App - Purple Theme Colors -->
+    
+    <!-- Primary Purple Gradient Colors -->
+    <color name="purple_dark">#1a1a2e</color>
+    <color name="purple_primary">#16213e</color>
+    <color name="purple_medium">#2d3561</color>
+    <color name="purple_light">#4a5899</color>
+    <color name="purple_accent">#6c63ff</color>
+    
+    <!-- Gradient Colors -->
+    <color name="gradient_start">#667eea</color>
+    <color name="gradient_end">#764ba2</color>
+    <color name="gradient_card_start">#2d3561</color>
+    <color name="gradient_card_end">#1a1a2e</color>
+    
+    <!-- Weather Condition Colors -->
+    <color name="sunny_yellow">#ffd700</color>
+    <color name="cloud_gray">#b0b0b0</color>
+    <color name="rain_blue">#4fc3f7</color>
+    <color name="storm_purple">#7c4dff</color>
+    
+    <!-- Temperature Colors -->
+    <color name="temp_hot">#ff6b6b</color>
+    <color name="temp_warm">#ffa94d</color>
+    <color name="temp_cool">#4dabf7</color>
+    <color name="temp_cold">#74c0fc</color>
+    
+    <!-- UI Colors -->
+    <color name="white_70">#B3FFFFFF</color>
+    <color name="white_50">#80FFFFFF</color>
+    <color name="white_30">#4DFFFFFF</color>
+    <color name="white_20">#33FFFFFF</color>
+    <color name="white_10">#1AFFFFFF</color>
+    
+    <!-- Card Colors -->
+    <color name="card_background">#2d3561</color>
+    <color name="card_background_light">#3d4571</color>
+    <color name="card_border">#4a5899</color>
+    
+    <!-- Text Colors -->
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#B3FFFFFF</color>
+    <color name="text_hint">#80FFFFFF</color>
+    
+    <!-- Status Colors -->
+    <color name="status_good">#4ade80</color>
+    <color name="status_moderate">#fbbf24</color>
+    <color name="status_poor">#f87171</color>
+    
+    <!-- Air Quality Colors -->
+    <color name="aqi_good">#22c55e</color>
+    <color name="aqi_moderate">#eab308</color>
+    <color name="aqi_unhealthy">#f97316</color>
+    <color name="aqi_very_unhealthy">#ef4444</color>
+    <color name="aqi_hazardous">#7c3aed</color>
+    
+    <!-- UV Index Colors -->
+    <color name="uv_low">#22c55e</color>
+    <color name="uv_moderate">#eab308</color>
+    <color name="uv_high">#f97316</color>
+    <color name="uv_very_high">#ef4444</color>
+    <color name="uv_extreme">#7c3aed</color>
+    
+    <!-- Bottom Navigation -->
+    <color name="nav_selected">#6c63ff</color>
+    <color name="nav_unselected">#80FFFFFF</color>
+    <color name="nav_background">#1a1a2e</color>
+    
+    <!-- Search Bar -->
+    <color name="search_background">#2d3561</color>
+    <color name="search_hint">#80FFFFFF</color>
+    
+    <!-- Cambodia Accent -->
+    <color name="cambodia_gold">#d4af37</color>
+    <color name="cambodia_red">#c8102e</color>
+    <color name="angkor_gold">#d4af37</color>
+    <color name="angkor_gold_dark">#b8962f</color>
+</resources>

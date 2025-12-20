@@ -47,9 +47,20 @@ fun WeatherApp(modifier: Modifier = Modifier) {
     
     NavHost(
         navController = navController,
-        startDestination = Screen.Weather.route,
+        startDestination = Screen.Splash.route,
         modifier = modifier.fillMaxSize()
     ) {
+        // Splash Screen - First impression, 2-3 seconds
+        composable(Screen.Splash.route) {
+            SplashScreen(
+                onSplashComplete = {
+                    navController.navigate(Screen.Weather.route) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+        
         // Login Screen
         composable(Screen.Login.route) {
             LoginScreen(

@@ -20,7 +20,7 @@ data class WeatherUiState(
     val weatherData: WeatherData? = null,
     val isLoading: Boolean = false,
     val error: String? = null,
-    val isCelsius: Boolean = false,
+    val isCelsius: Boolean = true,
     val currentLat: Double? = null,
     val currentLon: Double? = null,
     val isFromCache: Boolean = false,
@@ -38,7 +38,7 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
     private val _uiState = MutableStateFlow(WeatherUiState())
     val uiState: StateFlow<WeatherUiState> = _uiState
     
-    private var lastCity: String = "Phnom Penh"
+    private var lastCity: String = "Khan Sen Sok, Phnom Penh, Cambodia"
     private var searchJob: Job? = null
     
     // Debounce delay for search
@@ -218,15 +218,19 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
             feelsLike = response.main.feels_like.toInt(),
             humidity = response.main.humidity,
             windSpeed = response.wind.speed.toInt(),
+            pressure = response.main.pressure,
+            visibility = (response.visibility ?: 10000) / 1000.0,
             airQuality = AirQuality(
-                aqi = 42,
-                quality = "Good",
-                pm25 = 12.5,
-                pm10 = 18.3
+                aqi = 2,
+                quality = "Fair",
+                pm25 = 23.0,
+                pm10 = 29.0,
+                ozone = 62.0,
+                no2 = 1.0
             ),
             uvIndex = UVIndex(
-                index = 6,
-                level = "Moderate",
+                index = 2,
+                level = "Low",
                 peakTime = "12:00 PM"
             ),
             sunriseSunset = SunriseSunset(
