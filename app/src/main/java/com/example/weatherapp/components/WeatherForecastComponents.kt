@@ -476,7 +476,7 @@ fun WeatherDetailsRow(
     ) {
         WeatherDetailItem(
             icon = "💨",
-            value = "${weatherData.windSpeed} m/s",
+            value = "${weatherData.windSpeed} km/h",
             label = "Wind",
             modifier = Modifier.weight(1f)
         )
@@ -488,7 +488,7 @@ fun WeatherDetailsRow(
         )
         WeatherDetailItem(
             icon = "🌡️",
-            value = "${weatherData.pressure}",
+            value = "${weatherData.pressure} hPa",
             label = "Pressure",
             modifier = Modifier.weight(1f)
         )

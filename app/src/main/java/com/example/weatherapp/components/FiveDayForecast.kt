@@ -226,7 +226,7 @@ private fun DailyForecastItem(forecast: DailyForecast) {
                 Text(text = "💨", fontSize = 12.sp)
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "${String.format("%.2f", forecast.windSpeed)} m/s",
+                    text = "${forecast.windSpeed.toInt()} km/h",
                     fontSize = 12.sp,
                     color = CyanPrimary
                 )

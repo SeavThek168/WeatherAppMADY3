@@ -7,6 +7,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
+    // Always use real API URL - app falls back to mock data if network fails
     private const val BASE_URL = "https://api.openweathermap.org/data/2.5/"
     
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
@@ -15,15 +16,19 @@ object RetrofitClient {
     
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(loggingInterceptor)
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
+        .connectTimeout(15, TimeUnit.SECONDS)  // Reduced timeout for faster fallback
+        .readTimeout(15, TimeUnit.SECONDS)
         .build()
     
-    private val retrofit = Retrofit.Builder()
-        .baseUrl(BASE_URL)
-        .client(okHttpClient)
-        .addConverterFactory(GsonConverterFactory.create())
-        .build()
+    val retrofit: Retrofit by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
     
-    val weatherApiService: WeatherApiService = retrofit.create(WeatherApiService::class.java)
+    val weatherApiService: WeatherApiService by lazy {
+        retrofit.create(WeatherApiService::class.java)
+    }
 }

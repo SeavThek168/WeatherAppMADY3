@@ -175,7 +175,7 @@ fun SplashScreen(
                 Spacer(modifier = Modifier.height(12.dp))
                 
                 Text(
-                    text = "Cambodia",
+                    text = "CamWeather",
                     fontSize = 42.sp,
                     fontWeight = FontWeight.Bold,
                     color = WarmWhite,
@@ -183,7 +183,7 @@ fun SplashScreen(
                 )
                 
                 Text(
-                    text = "WEATHER",
+                    text = "CAMBODIA",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Light,
                     color = AngkorGold,
@@ -201,7 +201,7 @@ fun SplashScreen(
                 )
                 
                 Text(
-                    text = "Beautiful Weather, Beautiful Kingdom",
+                    text = "Your Weather Companion",
                     fontSize = 14.sp,
                     color = WarmWhite.copy(alpha = 0.6f),
                     textAlign = TextAlign.Center,

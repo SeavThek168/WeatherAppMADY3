@@ -17,44 +17,43 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.weatherapp.models.User
+
+// CamWeather theme colors
+private val PurplePrimary = Color(0xFF667eea)
+private val PurpleSecondary = Color(0xFF764ba2)
 
 @Composable
 fun ProfileScreen(
     user: User?,
     isGuest: Boolean,
     onNavigateToLogin: () -> Unit,
+    onNavigateToSettings: () -> Unit = {},
+    onNavigateToFAQ: () -> Unit = {},
+    onNavigateToLegal: () -> Unit = {},
+    onNavigateToAbout: () -> Unit = {},
     onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val gradientColors = listOf(
-        Color(0xFF4A90E2),
-        Color(0xFF7CB3E9)
-    )
-    
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFFE3F2FD),
-                        Color(0xFFBBDEFB)
-                    )
-                )
-            )
+            .background(Color(0xFFF5F7FA))
             .verticalScroll(rememberScrollState())
     ) {
         // Header with gradient
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp)
+                .height(220.dp)
                 .background(
-                    brush = Brush.verticalGradient(gradientColors)
+                    brush = Brush.linearGradient(
+                        colors = listOf(PurplePrimary, PurpleSecondary)
+                    )
                 )
         ) {
             Column(
@@ -64,13 +63,29 @@ fun ProfileScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
+                // App Logo/Title
+                Text(
+                    text = "🇰🇭",
+                    fontSize = 32.sp
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = "CamWeather",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
                 // Profile Avatar
                 Box(
                     modifier = Modifier
                         .size(80.dp)
                         .clip(CircleShape)
-                        .background(Color.White)
-                        .shadow(8.dp, CircleShape),
+                        .background(Color.White),
                     contentAlignment = Alignment.Center
                 ) {
                     if (isGuest) {
@@ -78,15 +93,15 @@ fun ProfileScreen(
                             imageVector = Icons.Default.Person,
                             contentDescription = "Guest",
                             modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = PurplePrimary
                         )
                     } else {
                         Text(
                             text = user?.name?.firstOrNull()?.uppercase() ?: "U",
                             style = MaterialTheme.typography.headlineLarge,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontSize = 40.sp
+                            color = PurplePrimary,
+                            fontSize = 36.sp
                         )
                     }
                 }
@@ -95,16 +110,16 @@ fun ProfileScreen(
                 
                 Text(
                     text = if (isGuest) "Guest User" else user?.name ?: "User",
-                    style = MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
                 
-                if (!isGuest) {
+                if (!isGuest && user?.email != null) {
                     Text(
-                        text = user?.email ?: "",
+                        text = user.email,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.9f)
+                        color = Color.White.copy(alpha = 0.8f)
                     )
                 }
             }
@@ -112,28 +127,27 @@ fun ProfileScreen(
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        // Guest Mode Message
+        // Guest Mode Card
         if (isGuest) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .shadow(4.dp, RoundedCornerShape(16.dp)),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    containerColor = Color(0xFFFFF3E0)
                 )
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(20.dp),
+                        .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = Icons.Default.Info,
                         contentDescription = "Info",
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = Color(0xFFFF9800),
                         modifier = Modifier.size(32.dp)
                     )
                     Spacer(modifier = Modifier.width(16.dp))
@@ -142,34 +156,30 @@ fun ProfileScreen(
                             text = "Guest Mode",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            color = Color(0xFFE65100)
                         )
                         Text(
-                            text = "Sign in to save locations & report issues",
+                            text = "Sign in to save locations and sync data",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            color = Color(0xFFE65100).copy(alpha = 0.7f)
                         )
                     }
                 }
             }
             
-            // Login Button for Guest
+            // Login Button
             Button(
                 onClick = onNavigateToLogin,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .height(56.dp)
-                    .shadow(4.dp, RoundedCornerShape(16.dp)),
+                    .height(56.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
+                    containerColor = PurplePrimary
                 )
             ) {
-                Icon(
-                    imageVector = Icons.Default.Login,
-                    contentDescription = "Login"
-                )
+                Icon(imageVector = Icons.Default.Login, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Sign In / Create Account",
@@ -177,84 +187,127 @@ fun ProfileScreen(
                     fontWeight = FontWeight.Bold
                 )
             }
+            
+            Spacer(modifier = Modifier.height(8.dp))
         }
         
-        // Menu Items
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-                .shadow(4.dp, RoundedCornerShape(20.dp)),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color.White
-            )
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                if (!isGuest) {
-                    ProfileMenuItem(
-                        icon = Icons.Default.LocationOn,
-                        title = "Saved Locations",
-                        subtitle = "${user?.savedLocations?.size ?: 0} locations",
-                        onClick = { /* Navigate to saved locations */ }
-                    )
-                    
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant
-                    )
-                }
-                
+        // Account Section
+        if (!isGuest) {
+            ProfileSectionCard(title = "Account") {
                 ProfileMenuItem(
-                    icon = Icons.Default.Settings,
-                    title = "Settings",
-                    subtitle = "App preferences",
-                    onClick = { /* Navigate to settings */ }
+                    icon = Icons.Default.Person,
+                    title = "Edit Profile",
+                    subtitle = "Update your information",
+                    onClick = { }
                 )
-                
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
-                
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ProfileMenuItem(
                     icon = Icons.Default.Notifications,
                     title = "Notifications",
-                    subtitle = "Weather alerts",
-                    onClick = { /* Navigate to notifications */ }
-                )
-                
-                if (!isGuest) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant
-                    )
-                    
-                    ProfileMenuItem(
-                        icon = Icons.Default.Report,
-                        title = "Report Inaccuracy",
-                        subtitle = "Help improve accuracy",
-                        onClick = { /* Navigate to report */ }
-                    )
-                }
-                
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
-                
-                ProfileMenuItem(
-                    icon = Icons.Default.Info,
-                    title = "About",
-                    subtitle = "Version 1.0",
-                    onClick = { /* Show about dialog */ }
+                    subtitle = "Weather alerts & updates",
+                    onClick = { }
                 )
             }
+            
+            Spacer(modifier = Modifier.height(12.dp))
         }
         
-        // Logout Button (only if logged in)
+        // App Settings Section
+        ProfileSectionCard(title = "Settings") {
+            ProfileMenuItem(
+                icon = Icons.Default.Settings,
+                title = "Preferences",
+                subtitle = "Units, language & more",
+                onClick = onNavigateToSettings
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            ProfileMenuItem(
+                icon = Icons.Default.Palette,
+                title = "Appearance",
+                subtitle = "Theme & display options",
+                onClick = onNavigateToSettings
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        // Support Section
+        ProfileSectionCard(title = "Support") {
+            ProfileMenuItem(
+                icon = Icons.Default.HelpOutline,
+                title = "FAQ",
+                subtitle = "Frequently asked questions",
+                onClick = onNavigateToFAQ
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            ProfileMenuItem(
+                icon = Icons.Default.Email,
+                title = "Contact Us",
+                subtitle = "Get help & support",
+                onClick = { }
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            ProfileMenuItem(
+                icon = Icons.Default.BugReport,
+                title = "Report a Problem",
+                subtitle = "Help us improve",
+                onClick = { }
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        // Legal Section
+        ProfileSectionCard(title = "Legal") {
+            ProfileMenuItem(
+                icon = Icons.Default.Description,
+                title = "Terms of Service",
+                subtitle = "Usage terms & conditions",
+                onClick = onNavigateToLegal
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            ProfileMenuItem(
+                icon = Icons.Default.PrivacyTip,
+                title = "Privacy Policy",
+                subtitle = "How we handle your data",
+                onClick = onNavigateToLegal
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            ProfileMenuItem(
+                icon = Icons.Default.Gavel,
+                title = "Licenses",
+                subtitle = "Open source licenses",
+                onClick = onNavigateToLegal
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        // About Section
+        ProfileSectionCard(title = "About") {
+            ProfileMenuItem(
+                icon = Icons.Default.Info,
+                title = "About CamWeather",
+                subtitle = "Version 1.0.0",
+                onClick = onNavigateToAbout
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            ProfileMenuItem(
+                icon = Icons.Default.Star,
+                title = "Rate App",
+                subtitle = "Share your feedback",
+                onClick = { }
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            ProfileMenuItem(
+                icon = Icons.Default.Share,
+                title = "Share App",
+                subtitle = "Tell friends about CamWeather",
+                onClick = { }
+            )
+        }
+        
+        // Logout Button
         if (!isGuest) {
             Spacer(modifier = Modifier.height(16.dp))
             
@@ -267,15 +320,9 @@ fun ProfileScreen(
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = MaterialTheme.colorScheme.error
-                ),
-                border = ButtonDefaults.outlinedButtonBorder.copy(
-                    width = 2.dp
                 )
             ) {
-                Icon(
-                    imageVector = Icons.Default.Logout,
-                    contentDescription = "Logout"
-                )
+                Icon(imageVector = Icons.Default.Logout, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Sign Out",
@@ -285,13 +332,60 @@ fun ProfileScreen(
             }
         }
         
+        // Footer
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        Text(
+            text = "CamWeather © 2026",
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.Gray,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+        
+        Text(
+            text = "Made with ❤️ in Cambodia",
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.Gray,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+        
         Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
 @Composable
+private fun ProfileSectionCard(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = Color.Gray,
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
+        )
+        
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                content = content
+            )
+        }
+    }
+}
+
+@Composable
 private fun ProfileMenuItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     title: String,
     subtitle: String,
     onClick: () -> Unit
@@ -300,21 +394,21 @@ private fun ProfileMenuItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(20.dp),
+            .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(48.dp)
+                .size(44.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer),
+                .background(PurplePrimary.copy(alpha = 0.1f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp)
+                tint = PurplePrimary,
+                modifier = Modifier.size(22.dp)
             )
         }
         
@@ -323,20 +417,20 @@ private fun ProfileMenuItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
             )
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                color = Color.Gray
             )
         }
         
         Icon(
             imageVector = Icons.Default.ChevronRight,
             contentDescription = "Navigate",
-            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+            tint = Color.Gray.copy(alpha = 0.5f)
         )
     }
 }
