@@ -1,10 +1,7 @@
 package com.example.weatherapp.components
 
-import android.annotation.SuppressLint
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.content.Context
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -23,6 +20,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.weatherapp.BuildConfig
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.tileprovider.tilesource.XYTileSource
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.util.MapTileIndex
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.TilesOverlay
 
 // Colors
 private val PurplePrimary = Color(0xFF667eea)
@@ -37,6 +43,24 @@ private enum class MapLayer(val id: String, val icon: String, val label: String)
     CLOUDS("clouds_new", "☁️", "Clouds")
 }
 
+/**
+ * Create OpenWeatherMap tile source for weather overlay
+ */
+private fun createWeatherTileSource(layerId: String, apiKey: String): OnlineTileSourceBase {
+    return object : XYTileSource(
+        "OWM_$layerId",
+        0, 18, 256, ".png",
+        arrayOf("https://tile.openweathermap.org/map/")
+    ) {
+        override fun getTileURLString(pMapTileIndex: Long): String {
+            val zoom = MapTileIndex.getZoom(pMapTileIndex)
+            val x = MapTileIndex.getX(pMapTileIndex)
+            val y = MapTileIndex.getY(pMapTileIndex)
+            return "https://tile.openweathermap.org/map/$layerId/$zoom/$x/$y.png?appid=$apiKey"
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WeatherMapCard(
@@ -47,14 +71,62 @@ fun WeatherMapCard(
     onLocationClick: (Double, Double) -> Unit = { _, _ -> },
     onCurrentLocationRequest: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     var selectedLayer by remember { mutableStateOf(MapLayer.TEMPERATURE) }
-    var mapKey by remember { mutableStateOf(0) }
+    var mapView by remember { mutableStateOf<MapView?>(null) }
+    var isLoadingLayer by remember { mutableStateOf(false) }
     
     // API Key
     val apiKey = if (BuildConfig.WEATHER_API_KEY.isNotEmpty()) {
         BuildConfig.WEATHER_API_KEY
     } else {
         "63030200ba49f825a3bd4ab30b8aad49"
+    }
+    
+    // Initialize OSMDroid configuration
+    LaunchedEffect(Unit) {
+        Configuration.getInstance().load(
+            context,
+            context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE)
+        )
+        Configuration.getInstance().userAgentValue = context.packageName
+    }
+    
+    // Function to update weather overlay
+    fun updateWeatherOverlay(map: MapView, layerId: String, ctx: Context, key: String) {
+        // Remove existing weather overlays (keep markers)
+        val overlaysToRemove = map.overlays.filterIsInstance<TilesOverlay>()
+        overlaysToRemove.forEach { overlay ->
+            map.overlays.remove(overlay)
+        }
+        
+        // Add new weather tile overlay with fresh cache
+        val weatherTileSource = createWeatherTileSource(layerId, key)
+        val weatherTileProvider = org.osmdroid.tileprovider.MapTileProviderBasic(ctx, weatherTileSource)
+        weatherTileProvider.clearTileCache()
+        val weatherOverlay = TilesOverlay(weatherTileProvider, ctx)
+        weatherOverlay.loadingBackgroundColor = android.graphics.Color.TRANSPARENT
+        weatherOverlay.loadingLineColor = android.graphics.Color.argb(100, 102, 126, 234)
+        weatherOverlay.setColorFilter(null)
+        map.overlays.add(0, weatherOverlay)
+        map.invalidate()
+        
+        android.util.Log.d("WeatherMapCard", "Layer updated to: $layerId")
+    }
+    
+    // Update weather overlay when layer changes
+    LaunchedEffect(selectedLayer) {
+        isLoadingLayer = true
+        mapView?.let { map ->
+            updateWeatherOverlay(map, selectedLayer.id, context, apiKey)
+        }
+        kotlinx.coroutines.delay(1500)
+        isLoadingLayer = false
+    }
+    
+    // Update map center when location changes
+    LaunchedEffect(currentLat, currentLon) {
+        mapView?.controller?.animateTo(GeoPoint(currentLat, currentLon))
     }
     
     Column(
@@ -102,23 +174,37 @@ fun WeatherMapCard(
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
                                 Text(
-                                    text = "Weather Map",
-                                    fontSize = 18.sp,
+                                    text = "Live Weather",
+                                    fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = TextWhite
                                 )
                                 Text(
-                                    text = "OpenWeatherMap",
-                                    fontSize = 11.sp,
-                                    color = TextWhite.copy(alpha = 0.7f)
+                                    text = "${selectedLayer.icon} ${selectedLayer.label} Layer",
+                                    fontSize = 12.sp,
+                                    color = TextWhite.copy(alpha = 0.8f)
                                 )
                             }
                         }
+                        
                         Row {
-                            IconButton(onClick = onExpandMap) {
+                            IconButton(
+                                onClick = onCurrentLocationRequest,
+                                modifier = Modifier.size(36.dp)
+                            ) {
                                 Icon(
-                                    imageVector = Icons.Default.OpenInFull,
-                                    contentDescription = "Expand",
+                                    imageVector = Icons.Default.MyLocation,
+                                    contentDescription = "My Location",
+                                    tint = TextWhite
+                                )
+                            }
+                            IconButton(
+                                onClick = onExpandMap,
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Fullscreen,
+                                    contentDescription = "Expand Map",
                                     tint = TextWhite
                                 )
                             }
@@ -126,44 +212,56 @@ fun WeatherMapCard(
                     }
                 }
                 
-                // Map Layer Chips
-                LazyRow(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color.White)
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(MapLayer.entries) { layer ->
-                        MapLayerChip(
-                            icon = layer.icon,
-                            text = layer.label,
-                            selected = selectedLayer == layer,
-                            onClick = {
-                                selectedLayer = layer
-                                mapKey++
-                            }
-                        )
-                    }
-                }
-                
-                // Map View using OpenWeatherMap
+                // Map Content with OSMDroid
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(280.dp)
+                        .height(200.dp)
                 ) {
-                    key(mapKey) {
-                        OpenWeatherMapCardView(
-                            layer = selectedLayer,
-                            apiKey = apiKey,
-                            lat = currentLat,
-                            lon = currentLon,
-                            zoom = 8
-                        )
-                    }
+                    AndroidView(
+                        factory = { ctx ->
+                            MapView(ctx).apply {
+                                setTileSource(TileSourceFactory.MAPNIK)
+                                setMultiTouchControls(true)
+                                controller.setZoom(9.0)
+                                controller.setCenter(GeoPoint(currentLat, currentLon))
+                                
+                                // Add weather overlay
+                                val weatherTileSource = createWeatherTileSource(selectedLayer.id, apiKey)
+                                val weatherTileProvider = org.osmdroid.tileprovider.MapTileProviderBasic(ctx, weatherTileSource)
+                                val weatherOverlay = TilesOverlay(weatherTileProvider, ctx)
+                                weatherOverlay.loadingBackgroundColor = android.graphics.Color.TRANSPARENT
+                                weatherOverlay.loadingLineColor = android.graphics.Color.TRANSPARENT
+                                overlays.add(0, weatherOverlay)
+                                
+                                // Add current location marker
+                                val marker = Marker(this)
+                                marker.position = GeoPoint(currentLat, currentLon)
+                                marker.title = "Current Location"
+                                marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                                overlays.add(marker)
+                                
+                                // Handle map clicks
+                                setOnTouchListener { _, event ->
+                                    if (event.action == android.view.MotionEvent.ACTION_UP) {
+                                        val projection = projection
+                                        val geoPoint = projection.fromPixels(event.x.toInt(), event.y.toInt()) as GeoPoint
+                                        onLocationClick(geoPoint.latitude, geoPoint.longitude)
+                                    }
+                                    false
+                                }
+                                
+                                mapView = this
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                        update = { map ->
+                            // Update weather layer when selection changes
+                            updateWeatherOverlay(map, selectedLayer.id, context, apiKey)
+                        }
+                    )
                     
-                    // Layer indicator
+                    // Quick layer indicator
                     Surface(
                         modifier = Modifier
                             .align(Alignment.TopStart)
@@ -172,141 +270,85 @@ fun WeatherMapCard(
                         color = Color.White.copy(alpha = 0.9f)
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = selectedLayer.icon, fontSize = 14.sp)
+                            Text(text = selectedLayer.icon, fontSize = 12.sp)
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = selectedLayer.label,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = PurplePrimary
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium
                             )
                         }
                     }
                     
-                    // Full screen button
-                    FloatingActionButton(
-                        onClick = onExpandMap,
+                    // Zoom controls
+                    Column(
                         modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(12.dp)
-                            .size(40.dp),
-                        containerColor = PurplePrimary
+                            .align(Alignment.CenterEnd)
+                            .padding(8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Fullscreen,
-                            contentDescription = "Full Screen",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        SmallFloatingActionButton(
+                            onClick = { mapView?.controller?.zoomIn() },
+                            containerColor = Color.White,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(Icons.Default.Add, "Zoom In", tint = PurplePrimary, modifier = Modifier.size(16.dp))
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        SmallFloatingActionButton(
+                            onClick = { mapView?.controller?.zoomOut() },
+                            containerColor = Color.White,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(Icons.Default.Remove, "Zoom Out", tint = PurplePrimary, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+                
+                // Layer Selection Chips
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White)
+                        .padding(12.dp)
+                ) {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(MapLayer.entries.toList()) { layer ->
+                            Surface(
+                                onClick = { selectedLayer = layer },
+                                shape = RoundedCornerShape(16.dp),
+                                color = if (selectedLayer == layer) 
+                                    PurplePrimary else Color.Gray.copy(alpha = 0.1f)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(text = layer.icon, fontSize = 14.sp)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = layer.label,
+                                        fontSize = 12.sp,
+                                        fontWeight = if (selectedLayer == layer) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (selectedLayer == layer) TextWhite else Color.DarkGray
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
     }
-}
-
-@SuppressLint("SetJavaScriptEnabled")
-@Composable
-private fun OpenWeatherMapCardView(
-    layer: MapLayer,
-    apiKey: String,
-    lat: Double,
-    lon: Double,
-    zoom: Int
-) {
-    val htmlContent = """
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-            <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-            <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-            <style>
-                body { margin: 0; padding: 0; }
-                #map { width: 100%; height: 100vh; }
-                .leaflet-control-attribution { font-size: 8px !important; }
-            </style>
-        </head>
-        <body>
-            <div id="map"></div>
-            <script>
-                var map = L.map('map', {
-                    zoomControl: false,
-                    attributionControl: true
-                }).setView([$lat, $lon], $zoom);
-                
-                // Base layer - OpenStreetMap
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    maxZoom: 18,
-                    attribution: '© OSM'
-                }).addTo(map);
-                
-                // Weather layer from OpenWeatherMap
-                L.tileLayer('https://tile.openweathermap.org/map/${layer.id}/{z}/{x}/{y}.png?appid=$apiKey', {
-                    maxZoom: 18,
-                    opacity: 0.6,
-                    attribution: '© OWM'
-                }).addTo(map);
-                
-                // Center marker
-                var marker = L.marker([$lat, $lon]).addTo(map);
-            </script>
-        </body>
-        </html>
-    """.trimIndent()
     
-    AndroidView(
-        factory = { ctx ->
-            WebView(ctx).apply {
-                webViewClient = WebViewClient()
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.loadWithOverviewMode = true
-                settings.useWideViewPort = true
-                settings.builtInZoomControls = false
-                settings.displayZoomControls = false
-            }
-        },
-        update = { webView ->
-            webView.loadDataWithBaseURL(
-                "https://tile.openweathermap.org",
-                htmlContent,
-                "text/html",
-                "UTF-8",
-                null
-            )
-        },
-        modifier = Modifier.fillMaxSize()
-    )
-}
-
-@Composable
-private fun MapLayerChip(
-    icon: String,
-    text: String,
-    selected: Boolean = false,
-    onClick: () -> Unit = {}
-) {
-    Surface(
-        modifier = Modifier.clickable { onClick() },
-        shape = RoundedCornerShape(20.dp),
-        color = if (selected) PurplePrimary else Color(0xFFF0F0F0)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(text = icon, fontSize = 14.sp)
-            Text(
-                text = text,
-                fontSize = 12.sp,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                color = if (selected) Color.White else Color.DarkGray
-            )
+    // Cleanup on dispose
+    DisposableEffect(Unit) {
+        onDispose {
+            mapView?.onDetach()
         }
     }
 }

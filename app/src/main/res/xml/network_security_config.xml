@@ -7,5 +7,8 @@
     </base-config>
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">api.openweathermap.org</domain>
+        <domain includeSubdomains="true">tile.openweathermap.org</domain>
+        <domain includeSubdomains="true">openstreetmap.org</domain>
+        <domain includeSubdomains="true">unpkg.com</domain>
     </domain-config>
 </network-security-config>

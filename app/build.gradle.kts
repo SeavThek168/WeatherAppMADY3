@@ -90,10 +90,11 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     
-    // Google Maps
-    implementation("com.google.maps.android:maps-compose:4.3.0")
-    implementation("com.google.android.gms:play-services-maps:18.2.0")
+    // Google Maps (for location services)
     implementation("com.google.android.gms:play-services-location:21.0.1")
+    
+    // OSMDroid - Free OpenStreetMap (no API key required)
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
     
     // DataStore for caching
     implementation("androidx.datastore:datastore-preferences:1.0.0")

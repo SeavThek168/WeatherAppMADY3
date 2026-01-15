@@ -60,16 +60,23 @@ class WeatherViewModel(application: Application) : AndroidViewModel(application)
     private suspend fun tryGetDeviceLocation() {
         if (locationManager.hasLocationPermission()) {
             try {
-                val location = locationManager.getLastKnownLocation()
-                    ?: locationManager.getCurrentLocation()
+                // Use the improved getBestLocation method
+                val location = locationManager.getBestLocation()
                 
                 if (location != null) {
+                    android.util.Log.d("WeatherViewModel", 
+                        "Got device location: ${location.latitude}, ${location.longitude}")
                     searchWeatherByCoords(location.latitude, location.longitude)
                     return
+                } else {
+                    android.util.Log.w("WeatherViewModel", "Location was null, using default city")
                 }
             } catch (e: Exception) {
+                android.util.Log.e("WeatherViewModel", "Location error: ${e.message}")
                 // Fall through to default city
             }
+        } else {
+            android.util.Log.w("WeatherViewModel", "No location permission, using default city")
         }
         // Fallback to default city
         searchWeatherByCity(lastCity)

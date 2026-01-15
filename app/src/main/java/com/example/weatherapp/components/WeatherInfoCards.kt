@@ -8,6 +8,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.weatherapp.models.AirQuality
 import com.example.weatherapp.models.UVIndex
 import com.example.weatherapp.models.SunriseSunset
@@ -154,42 +155,38 @@ fun SunriseSunsetCard(
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceAround
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
+                // Sunrise
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "🌅",
-                        style = MaterialTheme.typography.headlineMedium
-                    )
+                    Text(text = "🌅", fontSize = 24.sp)
                     Text(
                         text = sunriseSunset.sunrise,
-                        style = MaterialTheme.typography.titleMedium,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
                         text = "Sunrise",
-                        style = MaterialTheme.typography.bodySmall,
+                        fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
                 }
                 
+                // Sunset
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "🌇",
-                        style = MaterialTheme.typography.headlineMedium
-                    )
+                    Text(text = "🌇", fontSize = 24.sp)
                     Text(
                         text = sunriseSunset.sunset,
-                        style = MaterialTheme.typography.titleMedium,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
                         text = "Sunset",
-                        style = MaterialTheme.typography.bodySmall,
+                        fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
                 }
@@ -197,16 +194,12 @@ fun SunriseSunsetCard(
             
             Divider()
             
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = "Day Length: ${sunriseSunset.dayLength}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                )
-            }
+            Text(
+                text = "Day: ${sunriseSunset.dayLength}",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
         }
     }
 }
