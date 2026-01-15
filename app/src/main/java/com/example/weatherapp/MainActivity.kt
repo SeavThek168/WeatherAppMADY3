@@ -12,11 +12,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
-import com.example.weatherapp.models.AuthState
-import com.example.weatherapp.models.User
+import com.example.weatherapp.auth.AuthViewModel
 import com.example.weatherapp.navigation.Screen
 import com.example.weatherapp.screens.*
 import com.example.weatherapp.ui.theme.WeatherAppTheme
@@ -44,16 +44,9 @@ fun CamWeatherApp() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
     
-    // Auth state
-    var authState by remember { 
-        mutableStateOf(
-            AuthState(
-                isAuthenticated = false,
-                user = null,
-                isGuest = true
-            )
-        ) 
-    }
+    // Shared AuthViewModel for the app
+    val authViewModel: AuthViewModel = viewModel()
+    val authState by authViewModel.uiState.collectAsState()
     
     // Saved locations state
     var savedLocations by remember { 
@@ -99,67 +92,23 @@ fun CamWeatherApp() {
             composable(Screen.Login.route) {
                 LoginScreen(
                     onLoginSuccess = {
-                        authState = AuthState(
-                            isAuthenticated = true,
-                            user = User(
-                                id = "1",
-                                name = "John Doe",
-                                email = "john@example.com",
-                                savedLocations = listOf("Phnom Penh", "Siem Reap")
-                            ),
-                            isGuest = false
-                        )
                         navController.navigate(Screen.Home.route) {
                             popUpTo(Screen.Login.route) { inclusive = true }
                         }
                     },
-                    onNavigateToRegister = {
-                        navController.navigate(Screen.Register.route)
-                    },
-                    onSkipLogin = {
-                        authState = AuthState(
-                            isAuthenticated = false,
-                            user = null,
-                            isGuest = true
-                        )
-                        navController.navigate(Screen.Home.route) {
-                            popUpTo(Screen.Login.route) { inclusive = true }
-                        }
-                    }
+                    authViewModel = authViewModel
                 )
             }
             
-            // Register Screen
+            // Register Screen (redirect to Login since it's combined now)
             composable(Screen.Register.route) {
-                RegisterScreen(
-                    onRegisterSuccess = {
-                        authState = AuthState(
-                            isAuthenticated = true,
-                            user = User(
-                                id = "1",
-                                name = "New User",
-                                email = "newuser@example.com",
-                                savedLocations = emptyList()
-                            ),
-                            isGuest = false
-                        )
+                LoginScreen(
+                    onLoginSuccess = {
                         navController.navigate(Screen.Home.route) {
                             popUpTo(Screen.Login.route) { inclusive = true }
                         }
                     },
-                    onNavigateBack = {
-                        navController.popBackStack()
-                    },
-                    onSkipRegistration = {
-                        authState = AuthState(
-                            isAuthenticated = false,
-                            user = null,
-                            isGuest = true
-                        )
-                        navController.navigate(Screen.Home.route) {
-                            popUpTo(Screen.Login.route) { inclusive = true }
-                        }
-                    }
+                    authViewModel = authViewModel
                 )
             }
             
@@ -207,7 +156,7 @@ fun CamWeatherApp() {
                             it.copy(isDefault = it.name == location.name)
                         }
                     },
-                    isGuest = authState.isGuest,
+                    isGuest = !authState.isLoggedIn,
                     onNavigateToLogin = {
                         navController.navigate(Screen.Login.route)
                     }
@@ -239,8 +188,6 @@ fun CamWeatherApp() {
             // Profile Screen
             composable(Screen.Profile.route) {
                 ProfileScreen(
-                    user = authState.user,
-                    isGuest = authState.isGuest,
                     onNavigateToLogin = {
                         navController.navigate(Screen.Login.route)
                     },
@@ -256,16 +203,7 @@ fun CamWeatherApp() {
                     onNavigateToAbout = {
                         navController.navigate(Screen.About.route)
                     },
-                    onLogout = {
-                        authState = AuthState(
-                            isAuthenticated = false,
-                            user = null,
-                            isGuest = true
-                        )
-                        navController.navigate(Screen.Login.route) {
-                            popUpTo(Screen.Home.route) { inclusive = true }
-                        }
-                    }
+                    authViewModel = authViewModel
                 )
             }
             

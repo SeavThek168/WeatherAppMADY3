@@ -14,372 +14,431 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.weatherapp.models.User
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.weatherapp.auth.AuthViewModel
 
 // CamWeather theme colors
 private val PurplePrimary = Color(0xFF667eea)
 private val PurpleSecondary = Color(0xFF764ba2)
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
-    user: User?,
-    isGuest: Boolean,
     onNavigateToLogin: () -> Unit,
     onNavigateToSettings: () -> Unit = {},
     onNavigateToFAQ: () -> Unit = {},
     onNavigateToLegal: () -> Unit = {},
     onNavigateToAbout: () -> Unit = {},
-    onLogout: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    authViewModel: AuthViewModel = viewModel()
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color(0xFFF5F7FA))
-            .verticalScroll(rememberScrollState())
-    ) {
-        // Header with gradient
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(220.dp)
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(PurplePrimary, PurpleSecondary)
-                    )
-                )
+    val uiState by authViewModel.uiState.collectAsState()
+    val user = uiState.user
+    val isLoggedIn = uiState.isLoggedIn
+    
+    var showEditNameDialog by remember { mutableStateOf(false) }
+    var showChangePasswordDialog by remember { mutableStateOf(false) }
+    var showLogoutConfirm by remember { mutableStateOf(false) }
+    
+    // Snackbar
+    val snackbarHostState = remember { SnackbarHostState() }
+    
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let {
+            snackbarHostState.showSnackbar(it)
+            authViewModel.clearError()
+        }
+    }
+    
+    LaunchedEffect(uiState.successMessage) {
+        uiState.successMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            authViewModel.clearSuccessMessage()
+        }
+    }
+    
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { padding ->
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(Color(0xFFF5F7FA))
+                .verticalScroll(rememberScrollState())
+                .padding(padding)
         ) {
-            Column(
+            // Header with gradient
+            Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                    .fillMaxWidth()
+                    .height(220.dp)
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(PurplePrimary, PurpleSecondary)
+                        )
+                    )
             ) {
-                // App Logo/Title
-                Text(
-                    text = "🇰🇭",
-                    fontSize = 32.sp
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Text(
-                    text = "CamWeather",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // Profile Avatar
-                Box(
+                Column(
                     modifier = Modifier
-                        .size(80.dp)
-                        .clip(CircleShape)
-                        .background(Color.White),
-                    contentAlignment = Alignment.Center
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    if (isGuest) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Guest",
-                            modifier = Modifier.size(48.dp),
-                            tint = PurplePrimary
-                        )
-                    } else {
-                        Text(
-                            text = user?.name?.firstOrNull()?.uppercase() ?: "U",
-                            style = MaterialTheme.typography.headlineLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = PurplePrimary,
-                            fontSize = 36.sp
-                        )
+                    // App Logo/Title
+                    Text(
+                        text = "🇰🇭",
+                        fontSize = 32.sp
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Text(
+                        text = "CamWeather",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Profile Avatar
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(CircleShape)
+                            .background(Color.White),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (!isLoggedIn) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Guest",
+                                modifier = Modifier.size(48.dp),
+                                tint = PurplePrimary
+                            )
+                        } else {
+                            Text(
+                                text = user?.displayName?.firstOrNull()?.uppercase() ?: user?.email?.firstOrNull()?.uppercase() ?: "U",
+                                fontSize = 32.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = PurplePrimary
+                            )
+                        }
                     }
                 }
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                Text(
-                    text = if (isGuest) "Guest User" else user?.name ?: "User",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                
-                if (!isGuest && user?.email != null) {
-                    Text(
-                        text = user.email,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.8f)
-                    )
-                }
             }
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Guest Mode Card
-        if (isGuest) {
+            
+            // User Info Section
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .offset(y = (-20).dp)
+                    .padding(horizontal = 16.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFFFF3E0)
-                )
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = "Info",
-                        tint = Color(0xFFFF9800),
-                        modifier = Modifier.size(32.dp)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
+                    if (isLoggedIn) {
                         Text(
-                            text = "Guest Mode",
-                            style = MaterialTheme.typography.titleMedium,
+                            text = user?.displayName ?: "User",
+                            fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFE65100)
+                            color = Color.DarkGray
                         )
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Sign in to save locations and sync data",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFFE65100).copy(alpha = 0.7f)
+                            text = user?.email ?: "",
+                            fontSize = 14.sp,
+                            color = Color.Gray
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            AssistChip(
+                                onClick = { showEditNameDialog = true },
+                                label = { Text("Edit Name", fontSize = 12.sp) },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Edit, 
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            )
+                            AssistChip(
+                                onClick = { showChangePasswordDialog = true },
+                                label = { Text("Change Password", fontSize = 12.sp) },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Lock, 
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = "Guest User",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.DarkGray
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Sign in to sync your data",
+                            fontSize = 14.sp,
+                            color = Color.Gray
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = onNavigateToLogin,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = PurplePrimary)
+                        ) {
+                            Icon(Icons.Default.Login, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Sign In / Sign Up")
+                        }
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Menu Section
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Column(modifier = Modifier.padding(8.dp)) {
+                    ProfileMenuItem(
+                        icon = Icons.Default.Settings,
+                        title = "Settings",
+                        subtitle = "App preferences",
+                        onClick = onNavigateToSettings
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    ProfileMenuItem(
+                        icon = Icons.Default.QuestionAnswer,
+                        title = "FAQ",
+                        subtitle = "Frequently asked questions",
+                        onClick = onNavigateToFAQ
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    ProfileMenuItem(
+                        icon = Icons.Default.Description,
+                        title = "Legal",
+                        subtitle = "Terms and privacy",
+                        onClick = onNavigateToLegal
+                    )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    ProfileMenuItem(
+                        icon = Icons.Default.Info,
+                        title = "About",
+                        subtitle = "App information",
+                        onClick = onNavigateToAbout
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Logout Button (only if logged in)
+            if (isLoggedIn) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showLogoutConfirm = true }
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Logout,
+                            contentDescription = null,
+                            tint = Color.Red,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(
+                            text = "Log Out",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.Red
                         )
                     }
                 }
             }
             
-            // Login Button
-            Button(
-                onClick = onNavigateToLogin,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = PurplePrimary
-                )
-            ) {
-                Icon(imageVector = Icons.Default.Login, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Sign In / Create Account",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(100.dp))
         }
-        
-        // Account Section
-        if (!isGuest) {
-            ProfileSectionCard(title = "Account") {
-                ProfileMenuItem(
-                    icon = Icons.Default.Person,
-                    title = "Edit Profile",
-                    subtitle = "Update your information",
-                    onClick = { }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ProfileMenuItem(
-                    icon = Icons.Default.Notifications,
-                    title = "Notifications",
-                    subtitle = "Weather alerts & updates",
-                    onClick = { }
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-        }
-        
-        // App Settings Section
-        ProfileSectionCard(title = "Settings") {
-            ProfileMenuItem(
-                icon = Icons.Default.Settings,
-                title = "Preferences",
-                subtitle = "Units, language & more",
-                onClick = onNavigateToSettings
-            )
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-            ProfileMenuItem(
-                icon = Icons.Default.Palette,
-                title = "Appearance",
-                subtitle = "Theme & display options",
-                onClick = onNavigateToSettings
-            )
-        }
-        
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        // Support Section
-        ProfileSectionCard(title = "Support") {
-            ProfileMenuItem(
-                icon = Icons.Default.HelpOutline,
-                title = "FAQ",
-                subtitle = "Frequently asked questions",
-                onClick = onNavigateToFAQ
-            )
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-            ProfileMenuItem(
-                icon = Icons.Default.Email,
-                title = "Contact Us",
-                subtitle = "Get help & support",
-                onClick = { }
-            )
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-            ProfileMenuItem(
-                icon = Icons.Default.BugReport,
-                title = "Report a Problem",
-                subtitle = "Help us improve",
-                onClick = { }
-            )
-        }
-        
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        // Legal Section
-        ProfileSectionCard(title = "Legal") {
-            ProfileMenuItem(
-                icon = Icons.Default.Description,
-                title = "Terms of Service",
-                subtitle = "Usage terms & conditions",
-                onClick = onNavigateToLegal
-            )
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-            ProfileMenuItem(
-                icon = Icons.Default.PrivacyTip,
-                title = "Privacy Policy",
-                subtitle = "How we handle your data",
-                onClick = onNavigateToLegal
-            )
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-            ProfileMenuItem(
-                icon = Icons.Default.Gavel,
-                title = "Licenses",
-                subtitle = "Open source licenses",
-                onClick = onNavigateToLegal
-            )
-        }
-        
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        // About Section
-        ProfileSectionCard(title = "About") {
-            ProfileMenuItem(
-                icon = Icons.Default.Info,
-                title = "About CamWeather",
-                subtitle = "Version 1.0.0",
-                onClick = onNavigateToAbout
-            )
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-            ProfileMenuItem(
-                icon = Icons.Default.Star,
-                title = "Rate App",
-                subtitle = "Share your feedback",
-                onClick = { }
-            )
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-            ProfileMenuItem(
-                icon = Icons.Default.Share,
-                title = "Share App",
-                subtitle = "Tell friends about CamWeather",
-                onClick = { }
-            )
-        }
-        
-        // Logout Button
-        if (!isGuest) {
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            OutlinedButton(
-                onClick = onLogout,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error
-                )
-            ) {
-                Icon(imageVector = Icons.Default.Logout, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Sign Out",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-        
-        // Footer
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        Text(
-            text = "CamWeather © 2026",
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.Gray,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        )
-        
-        Text(
-            text = "Made with ❤️ in Cambodia",
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.Gray,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        )
-        
-        Spacer(modifier = Modifier.height(24.dp))
     }
-}
-
-@Composable
-private fun ProfileSectionCard(
-    title: String,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Column(
-        modifier = Modifier.padding(horizontal = 16.dp)
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            color = Color.Gray,
-            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
-        )
+    
+    // Edit Name Dialog
+    if (showEditNameDialog) {
+        var newName by remember { mutableStateOf(user?.displayName ?: "") }
         
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                content = content
-            )
-        }
+        AlertDialog(
+            onDismissRequest = { showEditNameDialog = false },
+            title = { Text("Edit Display Name") },
+            text = {
+                OutlinedTextField(
+                    value = newName,
+                    onValueChange = { newName = it },
+                    label = { Text("Display Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (newName.isNotBlank()) {
+                            authViewModel.updateDisplayName(newName)
+                            showEditNameDialog = false
+                        }
+                    },
+                    enabled = newName.isNotBlank() && !uiState.isLoading,
+                    colors = ButtonDefaults.buttonColors(containerColor = PurplePrimary)
+                ) {
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = Color.White
+                        )
+                    } else {
+                        Text("Save")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditNameDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+    
+    // Change Password Dialog
+    if (showChangePasswordDialog) {
+        var newPassword by remember { mutableStateOf("") }
+        var confirmPassword by remember { mutableStateOf("") }
+        
+        AlertDialog(
+            onDismissRequest = { showChangePasswordDialog = false },
+            title = { Text("Change Password") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = newPassword,
+                        onValueChange = { newPassword = it },
+                        label = { Text("New Password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it },
+                        label = { Text("Confirm Password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        isError = confirmPassword.isNotEmpty() && newPassword != confirmPassword
+                    )
+                    if (confirmPassword.isNotEmpty() && newPassword != confirmPassword) {
+                        Text(
+                            text = "Passwords don't match",
+                            color = MaterialTheme.colorScheme.error,
+                            fontSize = 12.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Password must be at least 6 characters",
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (newPassword == confirmPassword && newPassword.length >= 6) {
+                            authViewModel.updatePassword(newPassword)
+                            showChangePasswordDialog = false
+                        }
+                    },
+                    enabled = newPassword == confirmPassword && newPassword.length >= 6 && !uiState.isLoading,
+                    colors = ButtonDefaults.buttonColors(containerColor = PurplePrimary)
+                ) {
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = Color.White
+                        )
+                    } else {
+                        Text("Update")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showChangePasswordDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+    
+    // Logout Confirmation Dialog
+    if (showLogoutConfirm) {
+        AlertDialog(
+            onDismissRequest = { showLogoutConfirm = false },
+            title = { Text("Log Out") },
+            text = { Text("Are you sure you want to log out?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        authViewModel.signOut()
+                        showLogoutConfirm = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                ) {
+                    Text("Log Out")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutConfirm = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -399,16 +458,16 @@ private fun ProfileMenuItem(
     ) {
         Box(
             modifier = Modifier
-                .size(44.dp)
+                .size(40.dp)
                 .clip(CircleShape)
                 .background(PurplePrimary.copy(alpha = 0.1f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
-                contentDescription = title,
+                contentDescription = null,
                 tint = PurplePrimary,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.size(20.dp)
             )
         }
         
@@ -417,20 +476,20 @@ private fun ProfileMenuItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodyLarge,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Medium
             )
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
+                fontSize = 12.sp,
                 color = Color.Gray
             )
         }
         
         Icon(
             imageVector = Icons.Default.ChevronRight,
-            contentDescription = "Navigate",
-            tint = Color.Gray.copy(alpha = 0.5f)
+            contentDescription = null,
+            tint = Color.Gray
         )
     }
 }
