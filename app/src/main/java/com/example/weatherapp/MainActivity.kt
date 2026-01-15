@@ -4,14 +4,26 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.animation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.*
+import com.example.weatherapp.models.AuthState
+import com.example.weatherapp.models.User
+import com.example.weatherapp.navigation.Screen
+import com.example.weatherapp.screens.*
 import com.example.weatherapp.ui.theme.WeatherAppTheme
+
+// App colors
+private val PurplePrimary = Color(0xFF667eea)
+private val PurpleSecondary = Color(0xFF764ba2)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -19,29 +31,328 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             WeatherAppTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                CamWeatherApp()
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CamWeatherApp() {
+    val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+    
+    // Auth state
+    var authState by remember { 
+        mutableStateOf(
+            AuthState(
+                isAuthenticated = false,
+                user = null,
+                isGuest = true
+            )
+        ) 
+    }
+    
+    // Saved locations state
+    var savedLocations by remember { 
+        mutableStateOf(
+            listOf(
+                SavedLocation("Phnom Penh", "Cambodia", 11.5564, 104.9282, true),
+                SavedLocation("Siem Reap", "Cambodia", 13.3633, 103.8564, false),
+                SavedLocation("Battambang", "Cambodia", 13.1023, 103.1962, false)
+            )
+        ) 
+    }
+    
+    // Determine if we should show bottom nav
+    val showBottomNav = currentDestination?.route in Screen.bottomNavItems.map { it.route }
+    
+    Scaffold(
+        bottomBar = {
+            if (showBottomNav) {
+                CamWeatherBottomBar(
+                    navController = navController,
+                    currentDestination = currentDestination
+                )
+            }
+        }
+    ) { innerPadding ->
+        NavHost(
+            navController = navController,
+            startDestination = Screen.Splash.route,
+            modifier = Modifier.padding(innerPadding)
+        ) {
+            // Splash Screen
+            composable(Screen.Splash.route) {
+                SplashScreen(
+                    onSplashComplete = {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Splash.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+            
+            // Login Screen
+            composable(Screen.Login.route) {
+                LoginScreen(
+                    onLoginSuccess = {
+                        authState = AuthState(
+                            isAuthenticated = true,
+                            user = User(
+                                id = "1",
+                                name = "John Doe",
+                                email = "john@example.com",
+                                savedLocations = listOf("Phnom Penh", "Siem Reap")
+                            ),
+                            isGuest = false
+                        )
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Login.route) { inclusive = true }
+                        }
+                    },
+                    onNavigateToRegister = {
+                        navController.navigate(Screen.Register.route)
+                    },
+                    onSkipLogin = {
+                        authState = AuthState(
+                            isAuthenticated = false,
+                            user = null,
+                            isGuest = true
+                        )
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Login.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+            
+            // Register Screen
+            composable(Screen.Register.route) {
+                RegisterScreen(
+                    onRegisterSuccess = {
+                        authState = AuthState(
+                            isAuthenticated = true,
+                            user = User(
+                                id = "1",
+                                name = "New User",
+                                email = "newuser@example.com",
+                                savedLocations = emptyList()
+                            ),
+                            isGuest = false
+                        )
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Login.route) { inclusive = true }
+                        }
+                    },
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    },
+                    onSkipRegistration = {
+                        authState = AuthState(
+                            isAuthenticated = false,
+                            user = null,
+                            isGuest = true
+                        )
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Login.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+            
+            // Home/Weather Screen (Main Tab)
+            composable(Screen.Home.route) {
+                WeatherScreen(
+                    onNavigateToProfile = {
+                        navController.navigate(Screen.Profile.route)
+                    },
+                    onNavigateToMap = {
+                        navController.navigate(Screen.Map.route)
+                    }
+                )
+            }
+            
+            // Legacy Weather route for compatibility
+            composable(Screen.Weather.route) {
+                WeatherScreen(
+                    onNavigateToProfile = {
+                        navController.navigate(Screen.Profile.route)
+                    },
+                    onNavigateToMap = {
+                        navController.navigate(Screen.Map.route)
+                    }
+                )
+            }
+            
+            // Saved Locations Screen
+            composable(Screen.SavedLocations.route) {
+                SavedLocationsScreen(
+                    savedLocations = savedLocations,
+                    onLocationClick = { location ->
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Home.route) { inclusive = true }
+                        }
+                    },
+                    onAddLocation = {
+                        navController.navigate(Screen.Map.route)
+                    },
+                    onDeleteLocation = { location ->
+                        savedLocations = savedLocations.filter { it.name != location.name }
+                    },
+                    onSetDefault = { location ->
+                        savedLocations = savedLocations.map { 
+                            it.copy(isDefault = it.name == location.name)
+                        }
+                    },
+                    isGuest = authState.isGuest,
+                    onNavigateToLogin = {
+                        navController.navigate(Screen.Login.route)
+                    }
+                )
+            }
+            
+            // Map Screen
+            composable(Screen.Map.route) {
+                MapScreen(
+                    onLocationSelected = { lat, lon, locationName ->
+                        val newLocation = SavedLocation(
+                            name = locationName,
+                            country = "Cambodia",
+                            lat = lat,
+                            lon = lon,
+                            isDefault = false
+                        )
+                        if (!savedLocations.any { it.name == locationName }) {
+                            savedLocations = savedLocations + newLocation
+                        }
+                        navController.navigate(Screen.Home.route)
+                    },
+                    onClose = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+            
+            // Profile Screen
+            composable(Screen.Profile.route) {
+                ProfileScreen(
+                    user = authState.user,
+                    isGuest = authState.isGuest,
+                    onNavigateToLogin = {
+                        navController.navigate(Screen.Login.route)
+                    },
+                    onNavigateToSettings = {
+                        navController.navigate(Screen.Settings.route)
+                    },
+                    onNavigateToFAQ = {
+                        navController.navigate(Screen.FAQ.route)
+                    },
+                    onNavigateToLegal = {
+                        navController.navigate(Screen.Legal.route)
+                    },
+                    onNavigateToAbout = {
+                        navController.navigate(Screen.About.route)
+                    },
+                    onLogout = {
+                        authState = AuthState(
+                            isAuthenticated = false,
+                            user = null,
+                            isGuest = true
+                        )
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(Screen.Home.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+            
+            // Settings Screen
+            composable(Screen.Settings.route) {
+                SettingsScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+            
+            // FAQ Screen
+            composable(Screen.FAQ.route) {
+                FAQScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+            
+            // Legal Screen
+            composable(Screen.Legal.route) {
+                LegalScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+            
+            // About Screen
+            composable(Screen.About.route) {
+                AboutScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
         }
     }
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    WeatherAppTheme {
-        Greeting("Android")
+fun CamWeatherBottomBar(
+    navController: androidx.navigation.NavController,
+    currentDestination: androidx.navigation.NavDestination?
+) {
+    NavigationBar(
+        containerColor = Color.White,
+        contentColor = PurplePrimary,
+        tonalElevation = 8.dp
+    ) {
+        Screen.bottomNavItems.forEach { screen ->
+            val selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
+            
+            NavigationBarItem(
+                icon = {
+                    Icon(
+                        imageVector = if (selected) screen.selectedIcon!! else screen.unselectedIcon!!,
+                        contentDescription = screen.title
+                    )
+                },
+                label = {
+                    Text(
+                        text = screen.title,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                    )
+                },
+                selected = selected,
+                onClick = {
+                    navController.navigate(screen.route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = PurplePrimary,
+                    selectedTextColor = PurplePrimary,
+                    unselectedIconColor = Color.Gray,
+                    unselectedTextColor = Color.Gray,
+                    indicatorColor = PurplePrimary.copy(alpha = 0.1f)
+                )
+            )
+        }
     }
 }
+
+// Data class for saved locations
+data class SavedLocation(
+    val name: String,
+    val country: String,
+    val lat: Double,
+    val lon: Double,
+    val isDefault: Boolean = false
+)
