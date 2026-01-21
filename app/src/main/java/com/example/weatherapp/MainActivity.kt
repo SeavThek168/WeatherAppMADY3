@@ -1,206 +1,296 @@
 package com.example.weatherapp
 
-import android.Manifest
-import android.content.pm.PackageManager
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.weatherapp.ui.components.*
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.*
+import com.example.weatherapp.auth.AuthViewModel
+import com.example.weatherapp.navigation.Screen
+import com.example.weatherapp.screens.*
 import com.example.weatherapp.ui.theme.WeatherAppTheme
-import com.example.weatherapp.viewmodel.WeatherViewModel
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
 
-@OptIn(ExperimentalMaterial3Api::class)
+// App colors
+private val PurplePrimary = Color(0xFF667eea)
+private val PurpleSecondary = Color(0xFF764ba2)
+
 class MainActivity : ComponentActivity() {
-    
-    private val locationPermissionRequest = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        when {
-            permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) -> {
-                getCurrentLocation()
-            }
-            permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false) -> {
-                getCurrentLocation()
-            }
-            else -> {
-                Toast.makeText(this, "Location permission denied", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-    
-    private lateinit var viewModel: WeatherViewModel
-    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             WeatherAppTheme {
-                viewModel = viewModel()
-                
-                // Load default city on first launch
-                LaunchedEffect(Unit) {
-                    viewModel.searchWeatherByCity("Phnom Penh")
-                }
-                
-                WeatherApp(
-                    viewModel = viewModel,
-                    onLocationRequest = { requestLocationPermission() }
-                )
+                CamWeatherApp()
             }
-        }
-    }
-    
-    private fun requestLocationPermission() {
-        when {
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED -> {
-                getCurrentLocation()
-            }
-            else -> {
-                locationPermissionRequest.launch(
-                    arrayOf(
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                        Manifest.permission.ACCESS_COARSE_LOCATION
-                    )
-                )
-            }
-        }
-    }
-    
-    private fun getCurrentLocation() {
-        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-        
-        try {
-            fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
-                .addOnSuccessListener { location ->
-                    if (location != null) {
-                        viewModel.searchWeatherByLocation(location.latitude, location.longitude)
-                    } else {
-                        Toast.makeText(this, "Unable to get location", Toast.LENGTH_SHORT).show()
-                    }
-                }
-                .addOnFailureListener {
-                    Toast.makeText(this, "Failed to get location", Toast.LENGTH_SHORT).show()
-                }
-        } catch (e: SecurityException) {
-            Toast.makeText(this, "Location permission error", Toast.LENGTH_SHORT).show()
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WeatherApp(
-    viewModel: WeatherViewModel,
-    onLocationRequest: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val uiState by viewModel.uiState.collectAsState()
-    val scrollState = rememberScrollState()
+fun CamWeatherApp() {
+    val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+    
+    // Shared AuthViewModel for the app
+    val authViewModel: AuthViewModel = viewModel()
+    val authState by authViewModel.uiState.collectAsState()
+    
+    // Saved locations state
+    var savedLocations by remember { 
+        mutableStateOf(
+            listOf(
+                SavedLocation("Phnom Penh", "Cambodia", 11.5564, 104.9282, true),
+                SavedLocation("Siem Reap", "Cambodia", 13.3633, 103.8564, false),
+                SavedLocation("Battambang", "Cambodia", 13.1023, 103.1962, false)
+            )
+        ) 
+    }
+    
+    // Determine if we should show bottom nav
+    val showBottomNav = currentDestination?.route in Screen.bottomNavItems.map { it.route }
     
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Weather App") },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        bottomBar = {
+            if (showBottomNav) {
+                CamWeatherBottomBar(
+                    navController = navController,
+                    currentDestination = currentDestination
                 )
-            )
+            }
         }
     ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
+        NavHost(
+            navController = navController,
+            startDestination = Screen.Splash.route,
+            modifier = Modifier.padding(innerPadding)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(scrollState)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                WeatherSearchBar(
-                    onSearch = { city -> viewModel.searchWeatherByCity(city) },
-                    onLocationClick = onLocationRequest,
-                    isLoading = uiState.isLoading
-                )
-                
-                uiState.error?.let { error ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer
-                        )
-                    ) {
-                        Text(
-                            text = error,
-                            modifier = Modifier.padding(16.dp),
-                            color = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
-                }
-                
-                uiState.weather?.let { weather ->
-                    CurrentWeatherCard(weather = weather)
-                    
-                    uiState.forecast?.let { forecast ->
-                        FiveDayForecastCard(forecast = forecast)
-                    }
-                    
-                    WeatherHighlightsSection(
-                        weather = weather,
-                        airQuality = uiState.airQuality
-                    )
-                }
-                
-                if (uiState.weather == null && !uiState.isLoading && uiState.error == null) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer
-                        )
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "Welcome to Weather App",
-                                style = MaterialTheme.typography.headlineSmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Search for a city or use your current location to see weather information",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
+            // Splash Screen
+            composable(Screen.Splash.route) {
+                SplashScreen(
+                    onSplashComplete = {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Splash.route) { inclusive = true }
                         }
                     }
-                }
+                )
+            }
+            
+            // Login Screen
+            composable(Screen.Login.route) {
+                LoginScreen(
+                    onLoginSuccess = {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Login.route) { inclusive = true }
+                        }
+                    },
+                    authViewModel = authViewModel
+                )
+            }
+            
+            // Register Screen (redirect to Login since it's combined now)
+            composable(Screen.Register.route) {
+                LoginScreen(
+                    onLoginSuccess = {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Login.route) { inclusive = true }
+                        }
+                    },
+                    authViewModel = authViewModel
+                )
+            }
+            
+            // Home/Weather Screen (Main Tab)
+            composable(Screen.Home.route) {
+                WeatherScreen(
+                    onNavigateToProfile = {
+                        navController.navigate(Screen.Profile.route)
+                    },
+                    onNavigateToMap = {
+                        navController.navigate(Screen.Map.route)
+                    }
+                )
+            }
+            
+            // Legacy Weather route for compatibility
+            composable(Screen.Weather.route) {
+                WeatherScreen(
+                    onNavigateToProfile = {
+                        navController.navigate(Screen.Profile.route)
+                    },
+                    onNavigateToMap = {
+                        navController.navigate(Screen.Map.route)
+                    }
+                )
+            }
+            
+            // Saved Locations Screen
+            composable(Screen.SavedLocations.route) {
+                SavedLocationsScreen(
+                    savedLocations = savedLocations,
+                    onLocationClick = { location ->
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Home.route) { inclusive = true }
+                        }
+                    },
+                    onAddLocation = {
+                        navController.navigate(Screen.Map.route)
+                    },
+                    onDeleteLocation = { location ->
+                        savedLocations = savedLocations.filter { it.name != location.name }
+                    },
+                    onSetDefault = { location ->
+                        savedLocations = savedLocations.map { 
+                            it.copy(isDefault = it.name == location.name)
+                        }
+                    },
+                    isGuest = !authState.isLoggedIn,
+                    onNavigateToLogin = {
+                        navController.navigate(Screen.Login.route)
+                    }
+                )
+            }
+            
+            // Map Screen
+            composable(Screen.Map.route) {
+                MapScreen(
+                    onLocationSelected = { lat, lon, locationName ->
+                        val newLocation = SavedLocation(
+                            name = locationName,
+                            country = "Cambodia",
+                            lat = lat,
+                            lon = lon,
+                            isDefault = false
+                        )
+                        if (!savedLocations.any { it.name == locationName }) {
+                            savedLocations = savedLocations + newLocation
+                        }
+                        navController.navigate(Screen.Home.route)
+                    },
+                    onClose = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+            
+            // Profile Screen
+            composable(Screen.Profile.route) {
+                ProfileScreen(
+                    onNavigateToLogin = {
+                        navController.navigate(Screen.Login.route)
+                    },
+                    onNavigateToSettings = {
+                        navController.navigate(Screen.Settings.route)
+                    },
+                    onNavigateToFAQ = {
+                        navController.navigate(Screen.FAQ.route)
+                    },
+                    onNavigateToLegal = {
+                        navController.navigate(Screen.Legal.route)
+                    },
+                    onNavigateToAbout = {
+                        navController.navigate(Screen.About.route)
+                    },
+                    authViewModel = authViewModel
+                )
+            }
+            
+            // Settings Screen
+            composable(Screen.Settings.route) {
+                SettingsScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+            
+            // FAQ Screen
+            composable(Screen.FAQ.route) {
+                FAQScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+            
+            // Legal Screen
+            composable(Screen.Legal.route) {
+                LegalScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+            
+            // About Screen
+            composable(Screen.About.route) {
+                AboutScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
         }
     }
 }
+
+@Composable
+fun CamWeatherBottomBar(
+    navController: androidx.navigation.NavController,
+    currentDestination: androidx.navigation.NavDestination?
+) {
+    NavigationBar(
+        containerColor = Color.White,
+        contentColor = PurplePrimary,
+        tonalElevation = 8.dp
+    ) {
+        Screen.bottomNavItems.forEach { screen ->
+            val selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
+            
+            NavigationBarItem(
+                icon = {
+                    Icon(
+                        imageVector = if (selected) screen.selectedIcon!! else screen.unselectedIcon!!,
+                        contentDescription = screen.title
+                    )
+                },
+                label = {
+                    Text(
+                        text = screen.title,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                    )
+                },
+                selected = selected,
+                onClick = {
+                    navController.navigate(screen.route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = PurplePrimary,
+                    selectedTextColor = PurplePrimary,
+                    unselectedIconColor = Color.Gray,
+                    unselectedTextColor = Color.Gray,
+                    indicatorColor = PurplePrimary.copy(alpha = 0.1f)
+                )
+            )
+        }
+    }
+}
+
+// Data class for saved locations
+data class SavedLocation(
+    val name: String,
+    val country: String,
+    val lat: Double,
+    val lon: Double,
+    val isDefault: Boolean = false
+)
